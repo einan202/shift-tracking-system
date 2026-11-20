@@ -20,6 +20,9 @@ services:
     build: ./backend
     environment:
       ConnectionStrings__Default: "Server=db;Database=ClockApp;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      Database__AutoMigrate: "true"
+      SeedAdmin__Email: ${SEED_ADMIN_EMAIL:-}
+      SeedAdmin__Password: ${SEED_ADMIN_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
