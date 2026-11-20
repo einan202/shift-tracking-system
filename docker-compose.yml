@@ -38,6 +38,11 @@ services:
     working_dir: /src
     volumes:
       - ./backend:/src
+    environment:
+      TEST_DB_CONNECTION: "Server=db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+    depends_on:
+      db:
+        condition: service_healthy
     command: dotnet test
 
 volumes:
