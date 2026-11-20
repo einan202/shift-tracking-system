@@ -30,4 +30,4 @@ Web application where employees clock in/out and admins manage employees, the de
 - Before committing, list the proposed commits (message + files) and wait for the user's confirmation; stage explicit file paths (no `git add .` / whole directories that mix concerns); create the commits one at a time.
 - Do not push, and do not touch other projects' containers or databases.
 - Write tests with each backend change; run them before declaring an increment done.
-- Reference: the approved plan is in `/Users/sagit/.claude/plans/suggest-a-plan-for-wobbly-pearl.md`.
+- Reference: the approved plan is in `.claude/plan.md`.
