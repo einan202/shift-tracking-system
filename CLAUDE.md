@@ -28,6 +28,7 @@ Web application where employees clock in/out and admins manage employees, the de
 - **Do not commit** until the user has confirmed the changes. After each increment, stop, summarize, and ask the user to review/commit before continuing.
 - **Commits must be small — one logical change per commit, never everything at once.** Example split for the backend skeleton: (1) `.gitignore`; (2) solution + projects; (3) health endpoint + its test; (4) banned-clock analyzer + `BannedSymbols.txt`. Each commit should be reviewable in a minute and leave the build and tests green.
 - Before committing, list the proposed commits (message + files) and wait for the user's confirmation; stage explicit file paths (no `git add .` / whole directories that mix concerns); create the commits one at a time.
+- **Never commit generated build artifacts** (`*.dll`, .NET `bin/` and `obj/` directories, `node_modules/`, `dist/`); keep them excluded in `.gitignore`.
 - Do not push, and do not touch other projects' containers or databases.
 - Write tests with each backend change; run them before declaring an increment done.
 - Reference: the approved plan is in `.claude/plan.md`.
