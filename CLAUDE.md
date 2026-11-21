@@ -32,3 +32,12 @@ Web application where employees clock in/out and admins manage employees, the de
 - Do not push, and do not touch other projects' containers or databases.
 - Write tests with each backend change; run them before declaring an increment done.
 - Reference: the approved plan is in `.claude/plan.md`.
+
+## Verification (automatic, no `/verify` needed)
+Follow `.claude/commands/verify.md` on your own; do not wait to be asked.
+- After every **backend** change: run the relevant tests, rebuild only the backend, and check the affected endpoints against the running app. No screenshot.
+- After every **frontend** change: run the affected tests, rebuild only the frontend, check the affected UI flow in the browser and the console for errors.
+- If a check fails, fix it and re-verify without asking; stop and ask only for a real blocker.
+- Run the full `verify-api.sh` and the complete backend and frontend suites after a major milestone and before declaring work done; do not repeat them after every small edit.
+- Skip checks and rebuilds the change cannot affect.
+- Proof of verification is `.claude/last-verified`, written only by `.claude/commands/verify-all.sh` after all automated checks pass (never touch it by hand). A Stop hook blocks finishing if code changed after the last pass.

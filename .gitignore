@@ -11,3 +11,7 @@ dist/
 # Local secrets / OS
 .env
 .DS_Store
+
+# Local verification stamp
+.claude/last-verified
+.claude/verify-blocks
