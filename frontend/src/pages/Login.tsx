@@ -23,9 +23,7 @@ export default function Login() {
   return (
     <main className="narrow auth">
       <p className="auth__brand" aria-hidden="true">Shift Tracking</p>
-      <h1 className="sr-only">Shift Tracking</h1>
-      <section className="panel auth__card">
-      <h2>Sign in</h2>
+      <h1>Sign in</h1>
       <form onSubmit={submit} className="stack">
         <label>Email<input name="email" type="email" autoComplete="username" required /></label>
         <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
@@ -33,7 +31,6 @@ export default function Login() {
         <button className="btn btn--primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>
       <p className="hint">No password yet? Open the link your administrator gave you.</p>
-      </section>
     </main>
   )
 }

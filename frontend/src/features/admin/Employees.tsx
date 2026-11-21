@@ -68,7 +68,7 @@ export default function Employees() {
     <div className="stack">
       <section className="panel">
         <header className="panel__head">
-          <h2>Employees <span className="muted count">{list.length}</span></h2>
+          <h2>Employees</h2>
           <button className="btn btn--primary" onClick={() => { setError(null); setInvite(null); setWeek(companyWeek); setAdding(true) }}>Add employee</button>
         </header>
         {invite && !adding && (
@@ -80,14 +80,14 @@ export default function Employees() {
         )}
         <div className="table-wrap">
           <table className="employees">
-            <thead><tr><th>Name</th><th className="col-email">Email</th><th className="col-start">Starts</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr><th>Name</th><th className="col-email">Email</th><th className="col-start">Starts</th><th className="col-status">Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {list.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.fullName}<span className="email-sub">{e.email}</span></td>
+                  <td>{e.fullName}<span className="email-sub">{e.email}</span><span className="status-sub">{!e.isActive ? <span className="tag">deactivated</span>: !e.hasPassword ? <span className="tag">waiting for password</span>: <span className="tag tag--ok">active</span>}</span></td>
                   <td className="email col-email">{e.email}</td>
                   <td className="num col-start">{e.employmentStartDate ?? '–'}</td>
-                  <td>
+                  <td className="col-status">
                     {!e.isActive ? <span className="tag">deactivated</span>
                       : !e.hasPassword ? <span className="tag">waiting for password</span>
                       : <span className="tag tag--ok">active</span>}
