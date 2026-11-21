@@ -39,3 +39,11 @@ Facts and engineering decisions made while building `.claude/plan-attendance-day
 ## Technical debt
 - Admin attendance view still uses the old per-record correction model until 1.7.
 - No concurrency test yet for shift edits racing the employee's own punch (planned in 1.4b).
+
+## 1.5 Delete shift
+- `POST /attendance/me/shifts/delete` (+ `/delete/preview`): appends one `Void` correction per effective interval of the date (shared `BatchId`, reason code/text, employee as actor). Punches and earlier corrections are never touched; admins can still see the history (their view is rebuilt in 1.7).
+- Rules: reason required (Other needs text), blocked while any interval of the day is open, no future days, nothing before the employment start date, month must be Open, empty day rejected. Runs under `UserLock` in one transaction.
+- [Eng] Delete is a separate endpoint (not an option of set-shift) so the alert dialog and the audit rows stay unambiguous.
+- UI: Delete button on finished days, alert dialog stating the consequence (day counts as no work, balance becomes the negative expected) and a reason.
+- Known gap: the admin attendance view calls `EffectiveAttendance.LoadAsync` without voided rows, so deleted shifts vanish from the admin screen until 1.7 adds the history variant.
+- Lint: the `set-state-in-effect` warning in `Timesheet.tsx` is fixed. Four older warnings remain in `auth.tsx`, `ClockPanel.tsx`, `Employees.tsx`, `AttendanceAdmin.tsx` (same pattern, pre-existing).
