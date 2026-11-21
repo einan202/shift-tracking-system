@@ -46,6 +46,12 @@ export default function AttendanceAdmin() {
   }, [userId, ym])
   useEffect(() => { void load() }, [load])
 
+  // Reload before opening so the dialog's Zurich "now" (used for its defaults) is current, not from page load.
+  const openDialog = async (target: CorrectionTarget) => {
+    await load()
+    setDialog(target)
+  }
+
   const shown = view ? { year: Number(view.from.slice(0, 4)), month: Number(view.from.slice(5, 7)) } : null
   const step = (d: number) => {
     if (!shown) return
@@ -70,7 +76,7 @@ export default function AttendanceAdmin() {
               <button className="btn btn--small" onClick={() => step(1)} aria-label="Next month">›</button>
             </>
           )}
-          {userId !== null && <button className="btn" onClick={() => setDialog({ kind: 'Add', userId })}>Add missing record</button>}
+          {userId !== null && <button className="btn" onClick={() => void openDialog({ kind: 'Add', userId })}>Add missing record</button>}
         </div>
       </header>
 
@@ -110,7 +116,7 @@ export default function AttendanceAdmin() {
                   </td>
                   <td className="r">
                     {r.recordId !== null && userId !== null && (
-                      <button className="btn btn--small" onClick={() => setDialog({
+                      <button className="btn btn--small" onClick={() => void openDialog({
                         kind: 'Adjust', userId, recordId: r.recordId!, clockInUtc: r.effective.clockInUtc, clockOutUtc: r.effective.clockOutUtc,
                       })}>Correct</button>
                     )}
