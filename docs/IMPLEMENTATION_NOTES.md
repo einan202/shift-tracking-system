@@ -47,3 +47,9 @@ Facts and engineering decisions made while building `.claude/plan-attendance-day
 - UI: Delete button on finished days, alert dialog stating the consequence (day counts as no work, balance becomes the negative expected) and a reason.
 - Known gap: the admin attendance view calls `EffectiveAttendance.LoadAsync` without voided rows, so deleted shifts vanish from the admin screen until 1.7 adds the history variant.
 - Lint: the `set-state-in-effect` warning in `Timesheet.tsx` is fixed. Four older warnings remain in `auth.tsx`, `ClockPanel.tsx`, `Employees.tsx`, `AttendanceAdmin.tsx` (same pattern, pre-existing).
+
+## 1.4b (partial) and admin-history fix
+- Done: concurrency test for an employee shift edit racing the employee's own clock-in (30 rounds, service level, app-user connection). [Eng] Either order is legal: if the punch lands first, an edit of the same day adjusts that punch; otherwise the manual shift wins and the punch is refused (`OverlapsExisting`). The invariant tested: never two overlapping effective records.
+- Bug fixed (user report): admin history of a manually added shift showed only the `Add` row because later `Adjust` rows reference it through `TargetCorrectionId` (added in 1.1) and the admin endpoint only matched on the Add id. Now both are listed in order; regression test added. The UI no longer prints "was open – open" for `Add` rows.
+- NOT done yet: the post-clock-out prompt for stale shifts, DST offset selection in the dialog (limitation unchanged: ambiguous times are rejected with 422), and the long-shift timer format. The backend rules for "needs correction", the 24 h cap on corrected intervals and raw-span overlap already exist and are tested (1.3/1.4).
+- Admin attendance table mirroring the employee timesheet (consolidated day + per-interval history) is iteration 1.7, not started.
