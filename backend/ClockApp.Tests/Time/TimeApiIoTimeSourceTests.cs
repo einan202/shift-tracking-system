@@ -90,6 +90,8 @@ public class TimeApiIoTimeSourceTests
     [InlineData("""{"dateTime":"2026-11-20T18:20:57","timeZone":"America/New_York","dstActive":false}""")] // wrong zone
     [InlineData("""{"dateTime":"2026-07-04T09:00:00","timeZone":"Europe/Zurich","dstActive":false}""")]   // DST contradicts zone rules
     [InlineData("""{"dateTime":"2026-03-29T02:30:00","timeZone":"Europe/Zurich","dstActive":true}""")]    // nonexistent local time
+    [InlineData("""{"dateTime":"2026-11-20T17:20:57Z","timeZone":"Europe/Zurich","dstActive":false}""")]  // UTC designator
+    [InlineData("""{"dateTime":"2026-11-20T18:20:57+01:00","timeZone":"Europe/Zurich","dstActive":false}""")] // explicit offset
     public async Task Rejects_invalid_or_inconsistent_responses(string body)
     {
         var (source, _) = Create((_, _) => Json(body));

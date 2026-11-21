@@ -56,6 +56,11 @@ public sealed class TimeApiIoTimeSource(HttpClient http) : IAttendanceTimeSource
         if (!string.Equals(body.TimeZone, ZurichTime.ZoneId, StringComparison.Ordinal))
             throw new TimeSourceException($"{ProviderName} returned time zone '{body.TimeZone}', expected {ZurichTime.ZoneId}.");
 
+        // timeapi.io sends zone-local time without an offset. A Z/offset would be silently converted by the
+        // JSON parser (to UTC or the server's zone) and then misread as Zurich local time, so reject it.
+        if (body.DateTime.Value.Kind != DateTimeKind.Unspecified)
+            throw new TimeSourceException($"{ProviderName} dateTime unexpectedly carries a UTC/offset designator.");
+
         return ZurichTime.FromLocal(body.DateTime.Value, body.DstActive.Value, ProviderName);
     }
 }
