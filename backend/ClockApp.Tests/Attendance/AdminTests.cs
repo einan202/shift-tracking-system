@@ -221,6 +221,19 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
     }
 
     [RequiresDbFact]
+    public async Task Future_time_error_states_the_entered_and_the_current_zurich_time()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+
+        var res = await Correct(c, new { kind = "Add", userId = c.EmployeeId, clockInLocal = "2099-01-01T08:00:00", clockOutLocal = "2099-01-01T09:00:00", reason = "Far future entry" });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+        var error = (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString()!;
+        Assert.Contains("Clock-out 2099-01-01 09:00", error);  // what was entered (clock-out is checked first)
+        Assert.Contains("current Zurich time is 20", error); // what "now" is, so the admin need not guess
+    }
+
+    [RequiresDbFact]
     public async Task Dst_nonexistent_and_ambiguous_local_times_are_rejected_unless_the_offset_is_given()
     {
         var c = await StartAsync(); await using var _ = c.Factory;

@@ -71,9 +71,9 @@ public sealed class CorrectionService(AttendanceDbContext db)
         {
             if (o <= newIn) throw Invalid("Clock-out must be after clock-in.");
             if (o - newIn > MaxShiftLength) throw Invalid("A shift cannot be longer than 24 hours.");
-            if (o > nowUtc) throw Invalid("Clock-out cannot be in the future.");
+            if (o > nowUtc) throw Invalid(FutureMessage("Clock-out", o, nowUtc));
         }
-        if (newIn > nowUtc) throw Invalid("Clock-in cannot be in the future.");
+        if (newIn > nowUtc) throw Invalid(FutureMessage("Clock-in", newIn, nowUtc));
 
         // Must not overlap any OTHER effective record of this employee (open records count as [in, infinity)).
         var clash = effective
@@ -109,6 +109,12 @@ public sealed class CorrectionService(AttendanceDbContext db)
         await tx.CommitAsync(ct);
         return correction;
     }
+
+    // Names both times in Zurich wall-clock time so the admin sees exactly what was compared.
+    private static string FutureMessage(string what, DateTimeOffset entered, DateTimeOffset nowUtc) =>
+        $"{what} {Zurich(entered)} is in the future. The current Zurich time is {Zurich(nowUtc)}; enter a time at or before it.";
+
+    private static string Zurich(DateTimeOffset utc) => ZurichTime.ToLocal(utc).ToString("yyyy-MM-dd HH:mm");
 
     private static CorrectionException Invalid(string message) => new(CorrectionError.Invalid, message);
 }
