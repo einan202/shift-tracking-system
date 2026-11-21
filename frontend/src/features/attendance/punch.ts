@@ -2,11 +2,13 @@ import { api, errorText, NetworkError, type ApiResult } from '../../api'
 import { formatTime } from '../../format'
 
 export type AttendanceRecord = {
-  id: number
+  id: number | null // null for a manual (admin-added) entry
   clockInUtc: string
   clockOutUtc: string | null
   workDate: string
   provider: string
+  isAdjusted?: boolean // an admin corrected the punched times; the times shown are the corrected ones
+  isManual?: boolean
 }
 export type StatusBody = { clockedIn: boolean; record: AttendanceRecord | null }
 export type PunchAction = 'clock-in' | 'clock-out'

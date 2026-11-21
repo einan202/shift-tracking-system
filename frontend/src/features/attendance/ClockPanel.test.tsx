@@ -47,3 +47,16 @@ it('shows that nothing was recorded when the time service is down (503)', async 
   expect(await screen.findByText(/Nothing was recorded/i)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Clock in' })).toBeTruthy()
 })
+
+it('shows the corrected end time after an admin closed a forgotten clock-out (regression)', async () => {
+  // /status now returns the effective record: closed at 17:00 Zurich (16:00Z) by an admin correction.
+  const corrected: StatusBody = {
+    clockedIn: false,
+    record: { id: 1, clockInUtc: '2026-02-19T08:00:00Z', clockOutUtc: '2026-02-19T16:00:00Z', workDate: '2026-02-19', provider: 'time.now', isAdjusted: true },
+  }
+  const client: ClockApi = { punch: async () => ok(none), status: async () => ok(corrected) }
+  render(<ClockPanel client={client} />)
+
+  expect(await screen.findByText(/Last shift ended at 17:00/)).toBeTruthy()
+})
+

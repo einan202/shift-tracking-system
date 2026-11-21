@@ -19,6 +19,10 @@ export default function CorrectionDialog({ target, zurichNow, onClose, onSaved }
   const addDefaults = defaultAddTimes(zurichNow)
   const initialIn = target.kind === 'Adjust' ? toLocalInput(target.clockInUtc) : ''
   const initialOut = target.kind === 'Adjust' && target.clockOutUtc ? toLocalInput(target.clockOutUtc) : ''
+  // A record with a missing clock-out: pre-fill Zurich "now" so the admin never starts from the browser's own
+  // time zone (an empty datetime-local opens the picker at the browser clock). Clearing the field keeps it open.
+  const closesOpenRecord = target.kind === 'Adjust' && !target.clockOutUtc
+  const outDefault = target.kind === 'Add' ? addDefaults.out : closesOpenRecord ? zurichNow : initialOut
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -71,8 +75,11 @@ export default function CorrectionDialog({ target, zurichNow, onClose, onSaved }
         <label>Clock in (Zurich time)
           <input name="in" type="datetime-local" defaultValue={target.kind === 'Add' ? addDefaults.in : initialIn} required={target.kind === 'Add'} />
         </label>
+        {closesOpenRecord && (
+          <p className="hint">This record has no clock-out. It is pre-filled with the current Zurich time; clear the field to leave the record open.</p>
+        )}
         <label>Clock out (Zurich time)
-          <input name="out" type="datetime-local" defaultValue={target.kind === 'Add' ? addDefaults.out : initialOut} required={target.kind === 'Add' || !!initialOut} />
+          <input name="out" type="datetime-local" defaultValue={outDefault} required={target.kind === 'Add' || !!initialOut} />
         </label>
         <details>
           <summary>Daylight-saving repeated hour (last Sunday of October, 02:00–03:00)</summary>
