@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using ClockApp.Api.Admin;
+using ClockApp.Api.Attendance;
 using ClockApp.Api.Auth;
 using ClockApp.Api.Data;
 using ClockApp.Api.Time;
@@ -20,6 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AttendanceDbContext>((sp, options) =>
     options.UseSqlServer(sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")));
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<AttendanceService>();
 
 // System clock: used ONLY for authentication (JWT / invite expiry). Attendance time never comes from it.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -116,6 +118,7 @@ app.UseAuthorization();
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
 app.MapEmployeeEndpoints();
+app.MapAttendanceEndpoints();
 
 app.Run();
 
