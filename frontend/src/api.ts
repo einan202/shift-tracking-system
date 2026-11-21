@@ -20,7 +20,9 @@ export function onUnauthorized(handler: (() => void) | null) {
   unauthorizedHandler = handler
 }
 
-const TIMEOUT_MS = 10_000
+// Longer than the backend's worst case for a punch (2 + 2 time-API attempts, about 11 s), so a slow-but-successful
+// punch is not cut off by the browser while the server is still working on it.
+const TIMEOUT_MS = 15_000
 
 export async function api<T = unknown>(path: string, init: { method?: string; body?: unknown } = {}): Promise<ApiResult<T>> {
   const token = tokenStore.get()
