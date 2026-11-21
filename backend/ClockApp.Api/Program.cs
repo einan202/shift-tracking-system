@@ -23,6 +23,8 @@ builder.Services.AddDbContext<AttendanceDbContext>((sp, options) =>
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<CorrectionService>();
+builder.Services.AddSingleton<IMonthStateReader, AlwaysOpenMonthState>();
+builder.Services.AddScoped<ShiftEditService>();
 
 // System clock: used ONLY for authentication (JWT / invite expiry). Attendance time never comes from it.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -130,6 +132,7 @@ app.MapAuthEndpoints();
 app.MapEmployeeEndpoints();
 app.MapAttendanceEndpoints();
 app.MapMonthlyReportEndpoint();
+app.MapShiftEditEndpoints();
 app.MapSettingsEndpoints();
 app.MapAdminAttendanceEndpoints();
 
