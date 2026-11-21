@@ -204,6 +204,39 @@ public class MonthSheetTests
 
         Assert.Equal(180, r.Days.Single(x => x.Date.Day == 29).WorkedMinutes);
     }
+
+    [Fact]
+    public void Fall_back_day_counts_the_extra_real_hour()
+    {
+        // 2026-10-25 (clocks go back 03:00 -> 02:00): 01:00 -> 05:00 local is 5 real hours, not 4.
+        var punch = Punch("2026-10-25T01:00", "2026-10-25T05:00");
+        var v = new EmployeeScheduleVersion { Id = 1, EffectiveFrom = new DateOnly(2026, 10, 1), ExpectedMinutesSun = 300 };
+
+        var r = MonthSheet.Build(2026, 10, [punch], [v], new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 2));
+
+        Assert.Equal(300, r.Days.Single(x => x.Date.Day == 25).WorkedMinutes);
+        Assert.Equal(0, r.Days.Single(x => x.Date.Day == 25).BalanceMinutes);
+    }
+
+    [Fact]
+    public void Clock_out_after_midnight_needs_correction_unless_overnight_shifts_are_allowed()
+    {
+        var punch = Punch("2026-06-02T22:00", "2026-06-03T02:00");   // Tuesday 22:00 -> Wednesday 02:00
+
+        var normal = Build(new DateOnly(2026, 7, 1), punch);
+        Assert.True(Day(normal, 2).NeedsCorrection);       // nothing counts until a reasoned correction sets the end
+        Assert.Null(Day(normal, 2).WorkedMinutes);
+        Assert.Null(Day(normal, 3).WorkedMinutes);
+
+        var night = new EmployeeScheduleVersion
+        {
+            Id = 3, EffectiveFrom = Start, AllowsOvernightShifts = true, ExpectedMinutesMon = 510, ExpectedMinutesTue = 510, ExpectedMinutesWed = 510,
+        };
+        var overnight = MonthSheet.Build(2026, 6, [punch], [night], Start, new DateOnly(2026, 7, 1));
+        Assert.False(Day(overnight, 2).NeedsCorrection);
+        Assert.Equal(240, Day(overnight, 2).WorkedMinutes); // belongs to the start date
+        Assert.Null(Day(overnight, 3).WorkedMinutes);
+    }
 }
 
 /// <summary>The employee timesheet endpoint: one consolidated shift per day, no history for employees.</summary>
