@@ -43,5 +43,48 @@ public static class EmployeeEndpoints
                 inviteExpiresUtc = user.InviteExpiresUtc,
             });
         });
+
+        group.MapGet("", async (AttendanceDbContext db) => Results.Ok(await db.Users.AsNoTracking()
+            .Where(u => u.Role == UserRole.Employee).OrderBy(u => u.FullName)
+            .Select(u => new
+            {
+                id = u.Id,
+                email = u.Email,
+                fullName = u.FullName,
+                isActive = u.IsActive,
+                hasPassword = u.PasswordHash != null,
+                invitePending = u.InviteTokenHash != null,
+                inviteExpiresUtc = u.InviteExpiresUtc,
+            }).ToListAsync()));
+
+        // Deactivation takes effect immediately: the per-request IsActive check rejects the user's existing tokens.
+        group.MapPost("{id:int}/deactivate", (int id, AttendanceDbContext db) => SetActive(db, id, false));
+        group.MapPost("{id:int}/activate", (int id, AttendanceDbContext db) => SetActive(db, id, true));
+
+        // Forgotten password / lost link: the admin issues a NEW one-time link (replaces any previous token).
+        // The current password stays valid until the employee sets a new one through the link.
+        group.MapPost("{id:int}/invite", async (int id, AttendanceDbContext db, TimeProvider clock) =>
+        {
+            var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id && u.Role == UserRole.Employee);
+            if (user is null) return Results.NotFound(new { error = "Employee not found." });
+            var rawToken = InviteTokens.Issue(user, clock.GetUtcNow());
+            await db.SaveChangesAsync();
+            return Results.Ok(new
+            {
+                inviteToken = rawToken,
+                invitePath = $"/set-password?token={rawToken}",
+                inviteExpiresUtc = user.InviteExpiresUtc,
+            });
+        });
+    }
+
+    private static async Task<IResult> SetActive(AttendanceDbContext db, int id, bool active)
+    {
+        // Only employees can be (de)activated here, so an admin can never lock out the last admin.
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id && u.Role == UserRole.Employee);
+        if (user is null) return Results.NotFound(new { error = "Employee not found." });
+        user.IsActive = active;
+        await db.SaveChangesAsync();
+        return Results.Ok(new { id = user.Id, isActive = user.IsActive });
     }
 }

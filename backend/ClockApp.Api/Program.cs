@@ -22,6 +22,7 @@ builder.Services.AddDbContext<AttendanceDbContext>((sp, options) =>
     options.UseSqlServer(sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")));
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<CorrectionService>();
 
 // System clock: used ONLY for authentication (JWT / invite expiry). Attendance time never comes from it.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -119,6 +120,8 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
 app.MapEmployeeEndpoints();
 app.MapAttendanceEndpoints();
+app.MapSettingsEndpoints();
+app.MapAdminAttendanceEndpoints();
 
 app.Run();
 
