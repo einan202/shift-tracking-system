@@ -63,3 +63,30 @@ The dialog's `datetime-local` inputs for a new record had no value and no limit,
 - Live, in Chrome with the machine in Israel time (14:54 Israel, 13:54 Zurich): the dialog opened with 08:00 and 13:54 and the note "It is now 2026-11-21 13:54 in Zurich". Saving those defaults produced only an "overlaps record" message for existing records, with no "future" error.
 - Follow-up, live in Chrome: reproduced the stale cap (above), then after the fix left the page idle for about 70 s, opened the dialog (default 14:01, matching real Zurich time 14:01) and submitted 14:01 as clock-out: no browser block, only the server's "times overlap" message for an existing record (used on purpose so nothing is saved).
 - Unit tests: dialog defaults come from the Zurich time it is given, and the inputs have no `max` (regression test).
+
+## PR review fixes: correction targets, clock-out vs corrected clock-in, lock errors, open-record invariant
+
+### Problem
+- An `Adjust` correction with no `attendanceRecordId` was accepted (HTTP 201) when the employee had any manual (Add) entry, and stored as an `Adjust` row with `AttendanceRecordId = NULL`: an audit row that claims a change but changes nothing. Reproduced live.
+- Clock-out was checked only against the original clock-in. If an admin had moved an open record's clock-in to a later time, a clock-out time between the two was stored, giving a record that ends before it starts.
+- A timed-out per-user lock (another punch or correction holding it) ended as an unhandled 500.
+- Nothing in the database stopped `IsOpen = 1` together with a `ClockOutUtc`.
+
+### Root cause
+- `CorrectionService`: `e.RecordId == req.AttendanceRecordId` is also true for manual entries (`null == null`).
+- `AttendanceService.ClockOutAsync` compared the API time with `AttendanceRecords.ClockInUtc` only, not with the effective (corrected) clock-in.
+- `UserLock` threw `InvalidOperationException`, which the punch endpoint did not map.
+- The invariants lived only in application code.
+
+### Solution
+- `Adjust` must reference a record (422 otherwise); new DB check `CK_AttendanceCorrections_KindTarget` (Add has no target, Adjust has one).
+- Clock-out is rejected with the existing fail-closed 503 when the API time is not after the effective clock-in; the record stays open.
+- `UserLock` throws `AttendanceBusyException`; punches and corrections answer a retryable 503 (`Retry-After` on punches) and write nothing.
+- New DB check `CK_AttendanceRecords_OpenHasNoOut`. Both checks are in migration `AddIntegrityChecks`.
+
+### Verification
+- Regression tests: Adjust without record id (with an existing manual entry), clock-out before the corrected clock-in, busy lock gives 503 then succeeds after release, and both new DB checks (accepted and rejected shapes). The first three were run against the unfixed code and fail there.
+- Full backend suite 112 passed, 2 skipped (opt-in live tests).
+- Live: the Adjust reproduction now returns 422 and stores no extra row; the migration applied and both constraints exist in the running database.
+- Data note: the dev database contained one such invalid `Adjust` row, created by the reproduction itself; it was deleted before the migration so the constraint could be added. Any existing database with such rows would need them reviewed first.
+
