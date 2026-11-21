@@ -170,7 +170,9 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
 
         // A new clock-out of 07:00 is before the existing clock-in.
         var r2 = await s.Client.PostAsJsonAsync("/api/attendance/me/shifts", Edit("2026-02-02", null, "2026-02-02T07:00:00", "WrongTimePunched"));
-        Assert.Contains("new clock-out 07:00 is before your clock-in 08:00", await r2.Content.ReadAsStringAsync());
+        var m2 = await r2.Content.ReadAsStringAsync();
+        Assert.Contains("new clock-out 07:00 is earlier than your clock-in 08:00", m2);
+        Assert.Contains("current clock-out is 12:00", m2);
     }
 
     [ClockApp.Tests.Data.RequiresDbFact]
