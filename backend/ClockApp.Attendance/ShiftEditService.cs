@@ -129,7 +129,7 @@ public sealed class ShiftEditService(AttendanceDbContext db, IMonthStateReader m
             if (o <= newIn)
             {
                 string t(DateTimeOffset x) => ZurichTime.ToLocal(x).ToString("HH:mm");
-                throw Invalid(outChanged && !inChanged ? $"The new clock-out {t(o)} is earlier than your clock-in {t(newIn)}." + (currentOut is { } c ? $" Your current clock-out is {t(c)}, which is later than the new one." : "")
+                throw Invalid(outChanged && !inChanged ? $"The new clock-out {t(o)} is earlier than your clock-in {t(newIn)}; enter a time after {t(newIn)}." + (currentOut is { } c && t(c) != t(newIn) ? $" (Your current clock-out is {t(c)}.)" : "")
                     : inChanged && !outChanged ? $"The new clock-in {t(newIn)} is after your current clock-out {t(o)}. Change the clock-out too."
                     : $"The clock-out {t(o)} must be after the clock-in {t(newIn)}.");
             }
