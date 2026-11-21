@@ -147,6 +147,8 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
             ("2026-02-10", "2026-02-10T08:00:00", "2026-02-10T18:00:00", "ForgotClockIn", null),   // clock-out in the future (now 13:00)
             ("2026-01-30", "2026-01-30T08:00:00", "2026-01-30T16:00:00", "ForgotClockIn", null),   // before the employment start date (2026-02-01)
             ("2026-02-09", "2026-02-10T08:00:00", "2026-02-10T09:00:00", "ForgotClockIn", null),   // clock-in not on the edited day
+            ("2026-02-03", "0001-01-01T00:00:00", "0001-01-01T05:00:00", "ForgotClockIn", null),   // year out of range: 422, not a 500
+            ("2026-02-03", "9999-12-31T08:00:00", "9999-12-31T09:00:00", "ForgotClockIn", null),
         ];
 
         foreach (var c in cases)

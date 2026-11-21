@@ -146,4 +146,14 @@ public class ZurichFromUtcTests
         Assert.Throws<TimeSourceException>(() => Utc("2026-07-04T07:00:00Z", false, 120));
         Assert.Throws<TimeSourceException>(() => Utc("2026-07-04T07:00:00Z", true, 60));
     }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(1999)]
+    [InlineData(2101)]
+    [InlineData(9999)]
+    public void Local_times_outside_the_supported_years_are_rejected_not_thrown_as_range_errors(int year)
+    {
+        Assert.Throws<InvalidLocalTimeException>(() => ZurichTime.LocalToUtc(new DateTime(year, 6, 1, 8, 0, 0)));
+    }
 }
