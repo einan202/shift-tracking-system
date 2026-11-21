@@ -55,6 +55,52 @@ public sealed class ShiftEditService(AttendanceDbContext db, IMonthStateReader m
         return plan;
     }
 
+    /// <summary>Delete a day's shift: Void rows for every effective interval of the date (punches stay). Blocked while any is open.</summary>
+    public async Task<ShiftPlan> DeleteAsync(ShiftEditRequest req, DateTimeOffset nowUtc, bool commit, CancellationToken ct = default)
+    {
+        await using var tx = commit ? await db.Database.BeginTransactionAsync(ct) : null;
+        if (commit) await UserLock.AcquireAsync(db, req.UserId, ct);
+
+        var effective = await EffectiveAttendance.LoadAsync(db, req.UserId, ct: ct);
+        var (reason, _) = CheckReason(req);
+        if (await months.GetStateAsync(req.UserId, req.Date.Year, req.Date.Month, ct) != MonthState.Open)
+            throw Invalid("This month is locked and can no longer be changed.");
+        var start = await db.Users.AsNoTracking().Where(u => u.Id == req.UserId).Select(u => u.EmploymentStartDate).SingleAsync(ct);
+        if (start is { } s0 && req.Date < s0) throw Invalid($"You can only change days from your employment start date ({s0:dd.MM.yyyy}) on.");
+        if (req.Date > ZurichTime.LocalDateOf(nowUtc)) throw Invalid("Future days have no shift to delete.");
+
+        var day = effective.Where(e => e.WorkDate == req.Date).ToList();
+        if (day.Count == 0) throw Invalid("There is no shift on this day.");
+        if (day.Any(e => e.IsOpen || e.Out is null)) throw Invalid("This shift is still open. Clock out (or set the end time) before deleting it.");
+
+        var batch = Guid.NewGuid();
+        var rows = day.Select(t => new AttendanceCorrection
+        {
+            Kind = CorrectionKind.Void, AttendanceRecordId = t.RecordId, TargetCorrectionId = t.AddCorrectionId, BatchId = batch,
+            ReasonCode = req.ReasonCode, UserId = req.UserId, WorkDate = t.WorkDate,
+            PreviousClockInUtc = t.In, PreviousClockOutUtc = t.Out, Reason = reason, CreatedByUserId = req.UserId, CreatedAtUtc = nowUtc,
+        }).ToList();
+        var after = effective.Where(e => !day.Contains(e)).ToList();
+
+        if (commit)
+        {
+            db.AttendanceCorrections.AddRange(rows);
+            await db.SaveChangesAsync(ct);
+            await tx!.CommitAsync(ct);
+        }
+        return new ShiftPlan(effective, after, rows, null);
+    }
+
+    private static (string Reason, string Text) CheckReason(ShiftEditRequest req)
+    {
+        if (!ReasonCodes.All.Contains(req.ReasonCode)) throw Invalid("Choose one of the listed reasons.");
+        var text = req.ReasonText?.Trim() ?? "";
+        if (req.ReasonCode == ReasonCodes.Other && text.Length < CorrectionService.MinReasonLength)
+            throw Invalid($"Describe the reason ({CorrectionService.MinReasonLength}-300 characters).");
+        if (text.Length > 300) throw Invalid("The reason text is too long (300 characters at most).");
+        return (req.ReasonCode == ReasonCodes.Other ? text : text.Length > 0 ? $"{Labels[req.ReasonCode]}: {text}" : Labels[req.ReasonCode], text);
+    }
+
     private async Task<ShiftPlan> PlanAsync(
         List<EffectiveRecord> effective, ShiftEditRequest req, DateTimeOffset nowUtc, Guid batch, CancellationToken ct)
     {
