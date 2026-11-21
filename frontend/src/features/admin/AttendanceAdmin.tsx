@@ -14,7 +14,7 @@ type Row = {
   effective: { clockInUtc: string; clockOutUtc: string | null; workDate: string }
   isAdjusted: boolean; isOpen: boolean; history: Hist[]
 }
-type View = { from: string; to: string; records: Row[] }
+type View = { from: string; to: string; zurichNow: string; records: Row[] }
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const daysIn = (y: number, m: number) => [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
@@ -122,7 +122,7 @@ export default function AttendanceAdmin() {
         </div>
       )}
 
-      {dialog && <CorrectionDialog target={dialog} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); void load() }} />}
+      {dialog && view && <CorrectionDialog target={dialog} zurichNow={view.zurichNow} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); void load() }} />}
     </section>
   )
 }

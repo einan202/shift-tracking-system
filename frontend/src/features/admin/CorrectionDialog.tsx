@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { api, errorText } from '../../api'
 import { toLocalInput } from '../../format'
+import { defaultAddTimes } from './zurichDefaults'
 
 export type CorrectionTarget =
   | { kind: 'Add'; userId: number }
@@ -11,7 +12,9 @@ export type CorrectionTarget =
  * Times are typed as Zurich wall-clock time. The offset selects exist only for the repeated hour when
  * daylight saving ends, where one local time means two different instants.
  */
-export default function CorrectionDialog({ target, onClose, onSaved }: { target: CorrectionTarget; onClose: () => void; onSaved: () => void }) {
+export default function CorrectionDialog({ target, zurichNow, onClose, onSaved }: { target: CorrectionTarget; zurichNow: string; onClose: () => void; onSaved: () => void }) {
+  // Defaults and the upper limit are Zurich time from the server, not the browser's time zone.
+  const addDefaults = defaultAddTimes(zurichNow)
   const initialIn = target.kind === 'Adjust' ? toLocalInput(target.clockInUtc) : ''
   const initialOut = target.kind === 'Adjust' && target.clockOutUtc ? toLocalInput(target.clockOutUtc) : ''
   const [error, setError] = useState<string | null>(null)
@@ -62,11 +65,12 @@ export default function CorrectionDialog({ target, onClose, onSaved }: { target:
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="corr-title">
       <form className="dialog stack" onSubmit={submit}>
         <h2 id="corr-title">{target.kind === 'Add' ? 'Add missing record' : 'Correct record'}</h2>
+        <p className="hint">All times are Europe/Zurich time. It is now {zurichNow.slice(0, 10)} {zurichNow.slice(11)} in Zurich.</p>
         <label>Clock in (Zurich time)
-          <input name="in" type="datetime-local" defaultValue={initialIn} required={target.kind === 'Add'} />
+          <input name="in" type="datetime-local" defaultValue={target.kind === 'Add' ? addDefaults.in : initialIn} max={zurichNow} required={target.kind === 'Add'} />
         </label>
         <label>Clock out (Zurich time)
-          <input name="out" type="datetime-local" defaultValue={initialOut} required={target.kind === 'Add' || !!initialOut} />
+          <input name="out" type="datetime-local" defaultValue={target.kind === 'Add' ? addDefaults.out : initialOut} max={zurichNow} required={target.kind === 'Add' || !!initialOut} />
         </label>
         <details>
           <summary>Daylight-saving repeated hour (last Sunday of October, 02:00–03:00)</summary>
