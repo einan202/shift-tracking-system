@@ -106,3 +106,21 @@ The dialog's `datetime-local` inputs for a new record had no value and no limit,
 - Tests: the API integration tests now run as the least-privilege user (so a missing grant fails them); new permission tests (corrections cannot be updated or deleted, punches and users cannot be deleted, no DDL, migration history unreadable, normal app operations work, provisioner idempotent and password-rotating, unsafe names rejected); fragment helper tests (reads fragment, strips URL, survives re-render, legacy query link, no token); API test that `invitePath` uses the fragment; 409 test (and success once the time is after the corrected clock-in). Found and fixed on the way: `sp_getapplock` is scoped per database, so the provisioning lock is taken in `master`; first-time runs with parallel fixtures failed before that and passed 4 of 4 after it.
 - Live: the stack starts with the new connection strings (log line "Application database user clockapp_app is provisioned"); after startup the app's sessions run as `clockapp_app` and no pooled `sa` session remains; the smoke test passes. In Chrome, an invite link opened with the token in the fragment showed `/set-password` immediately (hash and search empty), the form worked, and the password was saved with no console errors.
 
+## `/status` ignored corrections; "Correct" on a missing clock-out used the browser's time zone
+
+### Problem
+- `GET /api/attendance/status` (and the clock-in/out responses) returned the ORIGINAL punch. After an admin closed a forgotten clock-out, the employee screen said "You are not clocked in" but the record still had `clockOutUtc: null`; a corrected clock-in or clock-out was not shown. (PR review, could-fix 3.)
+- In the admin "Correct" dialog for a record with a missing clock-out, the clock-out field was empty, so the browser's date picker started from the admin's own clock (Israel, one hour ahead of Zurich).
+
+### Root cause
+- `AttendanceService.GetCurrentOrLastAsync` read `AttendanceRecords` directly and the endpoint mapped that row, while corrections live in `AttendanceCorrections` and are applied only by `EffectiveAttendance`.
+- An empty `datetime-local` input opens its picker at the browser's current time.
+
+### Solution
+- `/status` and the clock-in/out responses now use the effective record (corrections applied) and add `isAdjusted` / `isManual`; the shown "last" record is the open one, else the latest by effective clock-in. The record id is null for a manual entry.
+- For a record with a missing clock-out, the dialog pre-fills the clock-out with the Zurich "now" (fetched when the dialog opens) and says so; clearing the field leaves the record open.
+
+### Verification
+- Backend regression tests (all three failed before the fix): status after an admin closes a forgotten clock-out, status for a closed record with corrected in/out, and the clock-out response after the clock-in was corrected. Frontend: the status message uses the corrected end time; the dialog pre-fills Zurich now for a missing clock-out and keeps the recorded value for a closed record.
+- Live: after an admin moved the clock-in, `/status` and the clock-out response showed the corrected time with `isAdjusted: true`. In Chrome (Israel time 17:03, Zurich 16:03) the Correct dialog for an open record offered 16:03 as clock-out, and saving closed the record ("16:00 - 16:03 corrected"). 124 backend and 27 frontend tests pass.
+
