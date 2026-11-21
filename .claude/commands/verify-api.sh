@@ -26,7 +26,7 @@ req POST /auth/login "" "{\"email\":\"$SEED_ADMIN_EMAIL\",\"password\":\"$SEED_A
 ADMIN=$(field "$BODY" "['token']")
 req POST /auth/login "" '{"email":"nobody@example.com","password":"wrong-password-1"}'; check "bad login is generic 401" 401
 
-req POST /admin/employees "$ADMIN" "{\"email\":\"$RUN@example.com\",\"fullName\":\"Verify Employee\"}"; check "admin creates employee" 201
+req POST /admin/employees "$ADMIN" "{\"email\":\"$RUN@example.com\",\"fullName\":\"Verify Employee\",\"schedule\":{\"minutes\":[480,480,480,480,480,480,480],\"allowsOvernightShifts\":false}}"; check "admin creates employee (works all 7 days so the punch checks run on any weekday)" 201
 EMP_ID=$(field "$BODY" "['id']"); INVITE=$(field "$BODY" "['inviteToken']")
 req POST /auth/set-password "" "{\"token\":\"$INVITE\",\"password\":\"verify-password-1\"}"; check "set password via invite" 200
 req POST /auth/set-password "" "{\"token\":\"$INVITE\",\"password\":\"verify-password-1\"}"; check "invite link is single-use" 400
