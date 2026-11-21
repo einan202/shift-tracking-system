@@ -46,6 +46,8 @@ public class AttendanceDbContext(DbContextOptions<AttendanceDbContext> options) 
             e.ToTable("AttendanceRecords", t =>
             {
                 t.HasCheckConstraint("CK_AttendanceRecords_OutAfterIn", "[ClockOutUtc] IS NULL OR [ClockOutUtc] > [ClockInUtc]");
+                // An open record has no clock-out yet. (A record closed by an admin correction has IsOpen = 0 and may keep ClockOutUtc NULL.)
+                t.HasCheckConstraint("CK_AttendanceRecords_OpenHasNoOut", "NOT ([IsOpen] = 1 AND [ClockOutUtc] IS NOT NULL)");
             });
             e.Property(x => x.TimeProvider).HasMaxLength(30).IsRequired();
             // At most one open record per user, enforced by the database (strict option A).
@@ -59,6 +61,8 @@ public class AttendanceDbContext(DbContextOptions<AttendanceDbContext> options) 
             e.ToTable("AttendanceCorrections", t =>
             {
                 t.HasCheckConstraint("CK_AttendanceCorrections_Kind", "[Kind] IN ('Add','Adjust')");
+                // 'Add' creates a missing record (no target); 'Adjust' always targets an existing punch.
+                t.HasCheckConstraint("CK_AttendanceCorrections_KindTarget", "([Kind] = 'Add' AND [AttendanceRecordId] IS NULL) OR ([Kind] = 'Adjust' AND [AttendanceRecordId] IS NOT NULL)");
                 t.HasCheckConstraint("CK_AttendanceCorrections_Reason", "LEN(LTRIM(RTRIM([Reason]))) >= 5");
                 t.HasCheckConstraint("CK_AttendanceCorrections_Times", "[CorrectedClockOutUtc] IS NULL OR [CorrectedClockInUtc] IS NULL OR [CorrectedClockOutUtc] > [CorrectedClockInUtc]");
             });

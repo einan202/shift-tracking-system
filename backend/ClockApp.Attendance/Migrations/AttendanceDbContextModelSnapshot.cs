@@ -79,6 +79,8 @@ namespace ClockApp.Attendance.Migrations
                         {
                             t.HasCheckConstraint("CK_AttendanceCorrections_Kind", "[Kind] IN ('Add','Adjust')");
 
+                            t.HasCheckConstraint("CK_AttendanceCorrections_KindTarget", "([Kind] = 'Add' AND [AttendanceRecordId] IS NULL) OR ([Kind] = 'Adjust' AND [AttendanceRecordId] IS NOT NULL)");
+
                             t.HasCheckConstraint("CK_AttendanceCorrections_Reason", "LEN(LTRIM(RTRIM([Reason]))) >= 5");
 
                             t.HasCheckConstraint("CK_AttendanceCorrections_Times", "[CorrectedClockOutUtc] IS NULL OR [CorrectedClockInUtc] IS NULL OR [CorrectedClockOutUtc] > [CorrectedClockInUtc]");
@@ -124,6 +126,8 @@ namespace ClockApp.Attendance.Migrations
 
                     b.ToTable("AttendanceRecords", null, t =>
                         {
+                            t.HasCheckConstraint("CK_AttendanceRecords_OpenHasNoOut", "NOT ([IsOpen] = 1 AND [ClockOutUtc] IS NOT NULL)");
+
                             t.HasCheckConstraint("CK_AttendanceRecords_OutAfterIn", "[ClockOutUtc] IS NULL OR [ClockOutUtc] > [ClockInUtc]");
                         });
                 });
