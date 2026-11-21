@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
+import { resetInviteTokenForTests } from './inviteLink'
 
-beforeEach(() => sessionStorage.clear())
+beforeEach(() => { sessionStorage.clear(); resetInviteTokenForTests() })
 afterEach(() => { vi.unstubAllGlobals(); window.history.pushState({}, '', '/') })
 
 it('shows the sign-in form when logged out', () => {
@@ -11,9 +12,10 @@ it('shows the sign-in form when logged out', () => {
 })
 
 it('opens the password form from an invite link', () => {
-  window.history.pushState({}, '', '/set-password?token=abc')
+  window.history.pushState({}, '', '/set-password#token=abc')
   render(<App />)
   expect(screen.getByRole('heading', { name: 'Choose your password' })).toBeTruthy()
+  expect(window.location.hash).toBe('') // the token no longer shows in the address bar
 })
 
 it('shows the employee screen for an employee session', async () => {

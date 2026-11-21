@@ -39,7 +39,8 @@ public static class EmployeeEndpoints
                 email = user.Email,
                 fullName = user.FullName,
                 inviteToken = rawToken,
-                invitePath = $"/set-password?token={rawToken}",
+                // Fragment, not query: a fragment is never sent to the server, so the token stays out of access logs.
+                invitePath = $"/set-password#token={rawToken}",
                 inviteExpiresUtc = user.InviteExpiresUtc,
             });
         });
@@ -72,7 +73,7 @@ public static class EmployeeEndpoints
             return Results.Ok(new
             {
                 inviteToken = rawToken,
-                invitePath = $"/set-password?token={rawToken}",
+                invitePath = $"/set-password#token={rawToken}",
                 inviteExpiresUtc = user.InviteExpiresUtc,
             });
         });
