@@ -21,7 +21,8 @@ export default function Login() {
   }
 
   return (
-    <main className="narrow">
+    <main className="narrow auth">
+      <p className="auth__brand" aria-hidden="true">Shift Tracking</p>
       <h1>Sign in</h1>
       <form onSubmit={submit} className="stack">
         <label>Email<input name="email" type="email" autoComplete="username" required /></label>

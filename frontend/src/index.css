@@ -85,12 +85,181 @@ th.r, td.r { text-align: right; }
 thead th { font-size: .85rem; color: var(--steel); }
 tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 
-.tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); }
-.tabs__tab { font: inherit; font-weight: 600; padding: .6rem 1rem; border: 0; background: transparent; color: var(--steel); cursor: pointer; border-bottom: 3px solid transparent; }
-.tabs__tab[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--signal); }
+.tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin-bottom: 1rem; overflow-x: auto; white-space: nowrap; }
+.tabs__tab { font: inherit; font-weight: 600; padding: .6rem 1rem; color: var(--steel); text-decoration: none; border-bottom: 3px solid transparent; flex: none; }
+.tabs__tab:hover { color: var(--ink); }
+.tabs__tab[aria-current='page'] { color: var(--ink); border-bottom-color: var(--signal); }
+.narrow-panel { max-width: 24rem; }
+.weekdays { border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .75rem; display: grid; gap: .25rem; }
+.weekdays legend { font-weight: 600; font-size: .9rem; padding: 0 .25rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .overlay { position: fixed; inset: 0; background: rgba(18, 32, 46, .55); display: grid; place-items: center; padding: 1rem; }
 .dialog { background: var(--surface); border-radius: var(--radius); padding: 1.25rem; width: min(30rem, 100%); max-height: 100%; overflow: auto; }
 .history { margin: .5rem 0 0; padding-left: 1.1rem; font-size: .9rem; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Timesheet (7 columns): future rows muted, today highlighted lightly, manual times orange, balance colours. */
+.summary { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: .25rem 0 1rem; }
+.summary h3 { margin: 0 0 .25rem; font-size: .9rem; color: var(--steel); }
+.summary dl { display: flex; gap: 1.25rem; margin: 0; }
+.summary dl div { display: grid; }
+.summary dt { font-size: .8rem; color: var(--steel); }
+.summary dd { margin: 0; font-weight: 700; font-size: 1.1rem; }
+.timesheet td, .timesheet th { white-space: nowrap; }
+.row--future td { color: #8b97a4; }
+.row--today td { background: #f4f8fc; }
+.manual { color: #b45309; font-weight: 700; background: #fff4e5; }
+.tag--manual { color: #b45309; border-color: #e9b872; background: #fff4e5; }
+.tag--warn { color: #9a3412; border-color: #f2a97b; }
+.bal--plus { color: var(--go); font-weight: 700; }
+.bal--minus { color: var(--signal); font-weight: 700; }
+.bal--zero { color: #6b7785; }
+
+.btn--danger { background: var(--signal); border-color: var(--signal); color: #fff; }
+.timesheet td .btn + .btn { margin-left: .35rem; }
+
+.voided { color: #8b97a4; text-decoration: line-through; }
+.voided .tag { text-decoration: none; }
+
+/* Login / set-password: brand above the card */
+.auth { margin-top: 2.5rem; }
+.auth__brand { margin: 0 0 .5rem; font-size: 1.5rem; font-weight: 700; }
+
+/* Employees: list first, form in a modal */
+.employees td, .employees th { white-space: nowrap; }
+.employees td.email { color: var(--steel); }
+.actions { white-space: nowrap; }
+.dialog--wide { width: min(46rem, 100%); }
+.form-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.form-grid input { width: 100%; }
+.dialog__actions { justify-content: flex-start; }
+
+/* Weekday durations: compact grid (7 across on desktop, wraps on tablet and phone) */
+.weekdays { border: 1px solid var(--line); border-radius: var(--radius); padding: .6rem .75rem .75rem; margin: 0; }
+.weekdays legend { font-size: .9rem; font-weight: 600; padding: 0 .35rem; }
+.weekdays__grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(7.75rem, 1fr)); }
+.weekdays__row { display: grid; gap: .25rem; padding: .15rem 0; }
+.weekdays__row--off { color: var(--steel); }
+.weekdays__day { display: flex; align-items: center; gap: .4rem; font-weight: 600; }
+.weekdays__time { display: flex; align-items: center; gap: .2rem; font-size: .85rem; }
+.weekdays__time input { width: 100%; min-width: 2.6rem; padding: .3rem .35rem; min-height: 2.1rem; text-align: right; appearance: textfield; -moz-appearance: textfield; }
+.weekdays__time input::-webkit-outer-spin-button, .weekdays__time input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+@media (max-width: 520px) { .overlay { padding: .5rem; align-items: start; } }
+
+/* Grid children may shrink below their content, so wide tables scroll inside their panel instead of widening the page */
+.stack > *, .panel { min-width: 0; }
+.email-sub, .status-sub { display: none; color: var(--steel); font-size: .85rem; }
+@media (max-width: 720px) {
+  .employees .col-email, .employees .col-start, .employees .col-status { display: none; }
+  .email-sub, .status-sub { display: block; }
+  .status-sub { margin-top: .25rem; }
+  .employees td, .employees th { white-space: normal; }
+  .employees td:first-child { overflow-wrap: anywhere; }
+  .employees .actions { white-space: normal; width: 7.5rem; }
+  .employees .actions .btn { display: block; width: 100%; margin: 0 0 .25rem; }
+}
+
+label .muted { font-weight: 400; }
+
+/* Admin attendance: filter bar, joined month stepper, day-grouped records */
+.att__summary { margin: 0; font-size: .9rem; }
+.att__count--manual { color: #b45309; font-weight: 600; }
+.att__count--warn { color: #9a3412; font-weight: 600; }
+.att-bar { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; padding: .75rem; margin-bottom: 1rem; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.att-bar__employee { flex: 1 1 14rem; max-width: 20rem; }
+.att-bar__employee select { width: 100%; }
+.att-bar__add { margin-left: auto; }
+.att-stepper { display: flex; align-items: stretch; border: 1px solid #98a4b1; border-radius: var(--radius); background: #fff; overflow: hidden; }
+.att-stepper__btn { font: inherit; font-size: 1.25rem; line-height: 1; width: 2.5rem; min-height: 2.5rem; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.att-stepper__btn:hover { background: var(--paper); }
+.att-stepper__month { display: grid; place-items: center; min-width: 9.5rem; padding: 0 .75rem; white-space: nowrap; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.att__empty { padding: 1.5rem 0; text-align: center; }
+
+.att-admin th, .att-admin td { border-bottom: 1px solid var(--line); }
+.att-admin thead th { padding-top: .25rem; padding-bottom: .4rem; }
+.att-admin td.num { white-space: nowrap; }
+.att-day th { background: var(--paper); color: var(--ink); font-size: .9rem; font-weight: 700; padding: .35rem .6rem; border-top: 1px solid var(--line); }
+.att-day__count { margin-left: .6rem; font-weight: 400; color: var(--steel); }
+.att-rec td { padding-top: .6rem; padding-bottom: .6rem; vertical-align: middle; }
+.att-rec__main { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .4rem; }
+.att-rec__main .tag { margin-left: 0; }
+.att-rec__time { font-size: 1.05rem; font-weight: 600; }
+.att-admin details { white-space: normal; }
+.att-hist td { padding-top: 0; padding-bottom: .6rem; }
+.att-rec:has(+ .att-hist) td { border-bottom: 0; padding-bottom: .15rem; }
+.att-history summary { cursor: pointer; font-size: .85rem; color: var(--steel); width: fit-content; }
+.att-history .history { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .75rem .5rem 1.75rem; }
+.punched-sub { display: none; font-size: .85rem; margin-top: .1rem; }
+
+@media (max-width: 720px) {
+  .panel.att { padding: .75rem; }
+  .att-bar { padding: .6rem; gap: .6rem; }
+  .att-bar__employee { flex: 1 1 100%; max-width: none; }
+  .att-bar__employee select, .att-bar__add, .att-stepper__btn { min-height: 2.75rem; }
+  .att-stepper { flex: 1 1 100%; }
+  .att-stepper__btn { width: 3.25rem; }
+  .att-stepper__month { flex: 1; min-width: 0; }
+  .att-bar__add { flex: 1 1 100%; margin-left: 0; }
+  .att-admin .col-punched, .att-admin thead { display: none; }
+  .att-hist td { padding-left: .4rem; padding-right: .4rem; }
+  .punched-sub { display: block; }
+  .att-admin th, .att-admin td { padding-left: .4rem; padding-right: .4rem; }
+  .att-rec td.r { width: 5.5rem; }
+  .att-rec .btn--small { min-height: 2.75rem; width: 100%; }
+}
+
+/* Employee timesheet and clock: same bar/stepper language as Admin Attendance */
+.summary { display: grid; grid-template-columns: 3fr 1fr; gap: .75rem; margin: 0 0 1rem; }
+.summary__block { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .6rem .9rem; }
+.summary h3 { margin: 0 0 .35rem; }
+.summary dl { gap: 1.5rem; }
+.summary dd { font-size: 1.25rem; }
+.timesheet thead th { padding-top: .25rem; padding-bottom: .4rem; }
+.timesheet td { padding-top: .45rem; padding-bottom: .45rem; vertical-align: middle; }
+.timesheet .ts-worked { font-weight: 600; }
+.timesheet .row--off td { color: #8b97a4; padding-top: .3rem; padding-bottom: .3rem; }
+.timesheet .row--today td:first-child { box-shadow: inset 3px 0 0 var(--signal); }
+.timesheet .ts-actions { text-align: right; }
+.timesheet td .tag { margin-left: .4rem; }
+
+.punch__state { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .4rem; min-height: 0; padding: .6rem .8rem; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid #98a4b1; border-radius: var(--radius); }
+.punch--on .punch__state { border-left-color: var(--signal); }
+.punch .panel__head { margin-bottom: 0; }
+
+@media (max-width: 720px) {
+  .summary { grid-template-columns: 1fr; gap: .5rem; }
+  .summary__block { padding: .5rem .75rem; }
+  .summary dd { font-size: 1.15rem; }
+  .summary__block:last-child { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .summary__block:last-child h3 { margin: 0; }
+  .summary__block:last-child dl div { display: flex; align-items: baseline; gap: .5rem; }
+  .summary dl { gap: 0; justify-content: space-between; }
+  .panel[aria-label='Timesheet'] { padding: .75rem; }
+  .panel[aria-label='Timesheet'] .att-stepper { flex: 1 1 100%; }
+  .panel[aria-label='Timesheet'] .att-stepper__btn { width: 3.25rem; min-height: 2.75rem; }
+  .panel[aria-label='Timesheet'] .att-stepper__month { flex: 1; min-width: 0; }
+  .timesheet thead { display: none; }
+  .timesheet, .timesheet tbody { display: block; }
+  .timesheet tr { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-areas: 'date day bal' 'in out worked' 'exp act act'; column-gap: .5rem; padding: .5rem .25rem; border-bottom: 1px solid var(--line); }
+  .timesheet td { display: block; padding: .1rem 0; border: 0; white-space: normal; text-align: left; }
+  .timesheet td:empty { display: none; }
+  .timesheet td[data-label]::before { content: attr(data-label); display: block; font-size: .75rem; font-weight: 400; color: var(--steel); }
+  .timesheet td .tag { display: block; width: fit-content; margin: .15rem 0 0; }
+  .timesheet .ts-date { grid-area: date; font-weight: 700; }
+  .timesheet .ts-day { grid-area: day; color: var(--steel); }
+  .timesheet .ts-balance { grid-area: bal; text-align: right; font-size: 1.05rem; }
+  .timesheet td:nth-child(3) { grid-area: in; }
+  .timesheet td:nth-child(4) { grid-area: out; }
+  .timesheet .ts-worked { grid-area: worked; text-align: left; }
+  .timesheet .ts-expected { grid-area: exp; text-align: left; }
+  .timesheet .ts-actions { grid-area: act; display: flex; justify-content: flex-end; gap: .4rem; }
+  .timesheet .ts-actions:empty { display: none; }
+  .timesheet td .btn + .btn { margin-left: 0; }
+  .timesheet .ts-actions .btn { min-height: 2.75rem; padding: .25rem .9rem; }
+  .timesheet .row--off { padding: .35rem .25rem; }
+  .timesheet .row--today { background: #f4f8fc; box-shadow: inset 3px 0 0 var(--signal); }
+  .timesheet .row--today td { background: transparent; }
+  .timesheet .row--today td:first-child { box-shadow: none; }
+}

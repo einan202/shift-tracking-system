@@ -33,6 +33,9 @@ namespace ClockApp.Attendance.Migrations
                     b.Property<long?>("AttendanceRecordId")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("CorrectedClockInUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -61,6 +64,14 @@ namespace ClockApp.Attendance.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<string>("ReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("TargetCorrectionId")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
@@ -71,17 +82,25 @@ namespace ClockApp.Attendance.Migrations
 
                     b.HasIndex("AttendanceRecordId");
 
+                    b.HasIndex("BatchId");
+
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("TargetCorrectionId");
+
+                    b.HasIndex("UserId", "TargetCorrectionId");
 
                     b.HasIndex("UserId", "WorkDate");
 
                     b.ToTable("AttendanceCorrections", null, t =>
                         {
-                            t.HasCheckConstraint("CK_AttendanceCorrections_Kind", "[Kind] IN ('Add','Adjust')");
+                            t.HasCheckConstraint("CK_AttendanceCorrections_Kind", "[Kind] IN ('Add','Adjust','Void')");
 
-                            t.HasCheckConstraint("CK_AttendanceCorrections_KindTarget", "([Kind] = 'Add' AND [AttendanceRecordId] IS NULL) OR ([Kind] = 'Adjust' AND [AttendanceRecordId] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_AttendanceCorrections_KindTarget", "([Kind] = 'Add' AND [AttendanceRecordId] IS NULL AND [TargetCorrectionId] IS NULL) OR ([Kind] IN ('Adjust','Void') AND (([AttendanceRecordId] IS NOT NULL AND [TargetCorrectionId] IS NULL) OR ([AttendanceRecordId] IS NULL AND [TargetCorrectionId] IS NOT NULL)))");
 
                             t.HasCheckConstraint("CK_AttendanceCorrections_Reason", "LEN(LTRIM(RTRIM([Reason]))) >= 5");
+
+                            t.HasCheckConstraint("CK_AttendanceCorrections_ReasonCode", "[ReasonCode] IN ('ForgotClockIn','ForgotClockOut','WrongTimePunched','DuplicateOrAccidental','WorkedOffsite','SystemProblem','Other')");
 
                             t.HasCheckConstraint("CK_AttendanceCorrections_Times", "[CorrectedClockOutUtc] IS NULL OR [CorrectedClockInUtc] IS NULL OR [CorrectedClockOutUtc] > [CorrectedClockInUtc]");
                         });
@@ -132,6 +151,76 @@ namespace ClockApp.Attendance.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClockApp.Attendance.Entities.EmployeeScheduleVersion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("AllowsOvernightShifts")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<short>("ExpectedMinutesFri")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesMon")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesSat")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesSun")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesThu")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesTue")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesWed")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("UserId", "EffectiveFrom", "Id");
+
+                    b.ToTable("EmployeeScheduleVersions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_AtLeastOneDay", "[ExpectedMinutesMon] + [ExpectedMinutesTue] + [ExpectedMinutesWed] + [ExpectedMinutesThu] + [ExpectedMinutesFri] + [ExpectedMinutesSat] + [ExpectedMinutesSun] > 0");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Fri", "[ExpectedMinutesFri] BETWEEN 0 AND 1440");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Mon", "[ExpectedMinutesMon] BETWEEN 0 AND 1440");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Sat", "[ExpectedMinutesSat] BETWEEN 0 AND 1440");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Sun", "[ExpectedMinutesSun] BETWEEN 0 AND 1440");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Thu", "[ExpectedMinutesThu] BETWEEN 0 AND 1440");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Tue", "[ExpectedMinutesTue] BETWEEN 0 AND 1440");
+
+                            t.HasCheckConstraint("CK_EmployeeScheduleVersions_Wed", "[ExpectedMinutesWed] BETWEEN 0 AND 1440");
+                        });
+                });
+
             modelBuilder.Entity("ClockApp.Attendance.Entities.ShiftSettings", b =>
                 {
                     b.Property<int>("Id")
@@ -139,6 +228,27 @@ namespace ClockApp.Attendance.Migrations
 
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("int");
+
+                    b.Property<short>("ExpectedMinutesFri")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesMon")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesSat")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesSun")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesThu")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesTue")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesWed")
+                        .HasColumnType("smallint");
 
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
@@ -152,13 +262,22 @@ namespace ClockApp.Attendance.Migrations
                             t.HasCheckConstraint("CK_ShiftSettings_Duration", "[DurationMinutes] BETWEEN 1 AND 1440");
 
                             t.HasCheckConstraint("CK_ShiftSettings_Singleton", "[Id] = 1");
+
+                            t.HasCheckConstraint("CK_ShiftSettings_Week", "[ExpectedMinutesMon] BETWEEN 0 AND 1440 AND [ExpectedMinutesTue] BETWEEN 0 AND 1440 AND [ExpectedMinutesWed] BETWEEN 0 AND 1440 AND [ExpectedMinutesThu] BETWEEN 0 AND 1440 AND [ExpectedMinutesFri] BETWEEN 0 AND 1440 AND [ExpectedMinutesSat] BETWEEN 0 AND 1440 AND [ExpectedMinutesSun] BETWEEN 0 AND 1440 AND ([ExpectedMinutesMon] + [ExpectedMinutesTue] + [ExpectedMinutesWed] + [ExpectedMinutesThu] + [ExpectedMinutesFri] + [ExpectedMinutesSat] + [ExpectedMinutesSun]) > 0");
                         });
 
                     b.HasData(
                         new
                         {
                             Id = 1,
-                            DurationMinutes = 480
+                            DurationMinutes = 480,
+                            ExpectedMinutesFri = (short)480,
+                            ExpectedMinutesMon = (short)480,
+                            ExpectedMinutesSat = (short)0,
+                            ExpectedMinutesSun = (short)0,
+                            ExpectedMinutesThu = (short)480,
+                            ExpectedMinutesTue = (short)480,
+                            ExpectedMinutesWed = (short)480
                         });
                 });
 
@@ -174,6 +293,9 @@ namespace ClockApp.Attendance.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateOnly?>("EmploymentStartDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -194,6 +316,11 @@ namespace ClockApp.Attendance.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("PayType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -206,6 +333,8 @@ namespace ClockApp.Attendance.Migrations
 
                     b.ToTable("Users", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Users_PayType", "[PayType] IN ('Monthly','Hourly')");
+
                             t.HasCheckConstraint("CK_Users_Role", "[Role] IN ('Admin','Employee')");
                         });
                 });
@@ -223,6 +352,11 @@ namespace ClockApp.Attendance.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ClockApp.Attendance.Entities.AttendanceCorrection", null)
+                        .WithMany()
+                        .HasForeignKey("TargetCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ClockApp.Attendance.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -232,6 +366,21 @@ namespace ClockApp.Attendance.Migrations
 
             modelBuilder.Entity("ClockApp.Attendance.Entities.AttendanceRecord", b =>
                 {
+                    b.HasOne("ClockApp.Attendance.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ClockApp.Attendance.Entities.EmployeeScheduleVersion", b =>
+                {
+                    b.HasOne("ClockApp.Attendance.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ClockApp.Attendance.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")

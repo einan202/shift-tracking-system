@@ -61,6 +61,9 @@ public static partial class AppUserProvisioner
             GRANT SELECT, INSERT         ON dbo.AttendanceCorrections TO [{user}];
             DENY  UPDATE, DELETE         ON dbo.AttendanceCorrections TO [{user}];
 
+            GRANT SELECT, INSERT         ON dbo.EmployeeScheduleVersions TO [{user}];
+            DENY  UPDATE, DELETE         ON dbo.EmployeeScheduleVersions TO [{user}];
+
             GRANT SELECT, UPDATE         ON dbo.ShiftSettings TO [{user}];
             DENY  INSERT, DELETE         ON dbo.ShiftSettings TO [{user}];
             """, ct);

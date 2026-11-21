@@ -67,6 +67,9 @@ public static class ZurichTime
     /// <exception cref="InvalidLocalTimeException"/>
     public static DateTimeOffset LocalToUtc(DateTime local, int? offsetMinutes = null)
     {
+        // Same year window as the reports (2000-2100); also keeps the UTC conversion away from DateTime's min/max range.
+        if (local.Year is < 2000 or > 2100)
+            throw new InvalidLocalTimeException($"The year must be between 2000 and 2100 (got {local.Year}).");
         local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
 
         if (Zone.IsInvalidTime(local))

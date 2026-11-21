@@ -34,7 +34,7 @@ public static class AdminAttendanceEndpoints
             var f = from ?? new DateOnly(today.Year, today.Month, 1);
             var t = to ?? f.AddMonths(1).AddDays(-1);
 
-            var effective = await EffectiveAttendance.LoadAsync(db, userId, f, t, ct);
+            var effective = await EffectiveAttendance.LoadAsync(db, userId, f, t, ct, includeVoided: true);   // admins also see deleted shifts
             var corrections = await db.AttendanceCorrections.AsNoTracking()
                 .Where(c => c.UserId == userId).OrderBy(c => c.Id).ToListAsync(ct);
             var adminNames = await db.Users.AsNoTracking()
@@ -48,9 +48,10 @@ public static class AdminAttendanceEndpoints
                 original = e.OriginalIn is null ? null : new { clockInUtc = e.OriginalIn, clockOutUtc = e.OriginalOut },
                 effective = new { clockInUtc = e.In, clockOutUtc = e.Out, workDate = e.WorkDate },
                 isAdjusted = e.IsAdjusted,
+                isVoided = e.IsVoided,
                 isOpen = e.IsOpen,
                 history = corrections
-                    .Where(c => e.IsManual ? c.Id == e.AddCorrectionId : c.AttendanceRecordId == e.RecordId)
+                    .Where(c => e.IsManual ? (c.Id == e.AddCorrectionId || c.TargetCorrectionId == e.AddCorrectionId) : c.AttendanceRecordId == e.RecordId)
                     .Select(c => new
                     {
                         id = c.Id,
