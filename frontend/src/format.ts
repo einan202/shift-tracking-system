@@ -31,3 +31,23 @@ export function formatMinutes(total: number): string {
 }
 
 export const formatDiff = (minutes: number) => (minutes > 0 ? `+${formatMinutes(minutes)}` : formatMinutes(minutes))
+
+/** Compact balance: `+3h`, `-1h 6m`, `+45m`, `0`. */
+export function formatBalance(minutes: number): string {
+  if (minutes === 0) return '0'
+  const sign = minutes < 0 ? '-' : '+'
+  const abs = Math.abs(minutes)
+  const h = Math.floor(abs / 60)
+  const m = abs % 60
+  return `${sign}${[h ? `${h}h` : '', m ? `${m}m` : ''].filter(Boolean).join(' ')}`
+}
+
+/** Compact duration without sign: `8h 30m`, `45m`, `6h`. */
+export function formatHours(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return [h ? `${h}h` : '', m ? `${m}m` : ''].filter(Boolean).join(' ') || '0'
+}
+
+/** 2026-11-21 -> 21.11.2026 (plain calendar date, no time zone involved). */
+export const formatDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`
