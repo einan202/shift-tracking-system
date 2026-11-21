@@ -84,6 +84,13 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await UserLock.AcquireAsync(db, userId, ct);
 
+        // The clock-out must also be after the EFFECTIVE clock-in: an admin may have corrected an open record's
+        // clock-in (up to the server's "now"), and the time API can be a little behind that.
+        var open = (await EffectiveAttendance.LoadAsync(db, userId, ct: ct)).FirstOrDefault(e => e.IsOpen);
+        if (open is null) return new ClockResult(ClockOutcome.NotClockedIn, null);
+        if (now.UtcInstant <= open.In)
+            throw new TimeSourceException("Time source returned a time that is not after the (corrected) clock-in; nothing was recorded.");
+
         // Atomic conditional update: the first committed clock-out wins and is never overwritten.
         // A concurrent second one matches 0 rows and becomes a 409 (its API time is discarded).
         // "ClockInUtc < out" also guarantees the shift has positive length (provider skew guard).

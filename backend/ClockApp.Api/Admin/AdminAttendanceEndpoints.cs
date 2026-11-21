@@ -103,6 +103,11 @@ public static class AdminAttendanceEndpoints
                     correctedClockOutUtc = created.CorrectedClockOutUtc,
                 });
             }
+            catch (AttendanceBusyException)
+            {
+                return Results.Json(new { error = "This employee's attendance is being updated. Nothing was saved; please try again." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
             catch (CorrectionException ex) when (ex.Error == CorrectionError.NotFound)
             {
                 return Results.NotFound(new { error = ex.Message });

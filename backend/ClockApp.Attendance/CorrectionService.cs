@@ -59,6 +59,8 @@ public sealed class CorrectionService(AttendanceDbContext db)
         }
         else
         {
+            // Must name a punch: without this, "null == null" would also match manual (Add) entries.
+            if (req.AttendanceRecordId is null) throw Invalid("An adjustment must reference an attendance record.");
             target = effective.FirstOrDefault(e => e.RecordId == req.AttendanceRecordId)
                 ?? throw new CorrectionException(CorrectionError.NotFound, "Attendance record not found for this employee.");
             // Missing side = keep the current effective value (e.g. only supply a clock-out to close a forgotten one).

@@ -18,6 +18,12 @@ internal static class UserLock
             .ToListAsync(ct);
         // 0/1 = granted; negative = timeout, cancelled, deadlock or error.
         if (result.Single() < 0)
-            throw new InvalidOperationException($"Could not obtain the attendance lock for user {userId}.");
+            throw new AttendanceBusyException($"Could not obtain the attendance lock for user {userId}.");
     }
 }
+
+/// <summary>
+/// Another punch or correction for the same user held the lock for too long. Nothing was written; the caller
+/// should answer with a retryable 503 rather than a server error.
+/// </summary>
+public sealed class AttendanceBusyException(string message) : Exception(message);

@@ -58,6 +58,16 @@ public static class AttendanceEndpoints
         {
             return await action();
         }
+        catch (AttendanceBusyException ex)
+        {
+            // Another punch/correction of this user held the lock too long: nothing was written, retry is safe.
+            log.LogWarning(ex, "Attendance lock busy; punch rejected.");
+            return Results.Json(
+                new { error = "Your attendance is being updated. Nothing was recorded; please try again." },
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                contentType: null)
+                .WithRetryAfter(2);
+        }
         catch (TimeSourceException ex)
         {
             log.LogWarning(ex, "Time source failure; punch rejected.");
