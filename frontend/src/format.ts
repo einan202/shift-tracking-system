@@ -51,3 +51,11 @@ export function formatHours(minutes: number): string {
 
 /** 2026-11-21 -> 21.11.2026 (plain calendar date, no time zone involved). */
 export const formatDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`
+
+/** "21.11.26, 19:12 – 19:14": the date is shown once when both ends fall on the same Zurich day; a missing end is "open". */
+export function formatRange(from: string | null, to: string | null): string {
+  const a = from ? formatStamp(from) : 'open'
+  if (!to) return `${a} – open`
+  const b = formatStamp(to)
+  return a.split(', ')[0] === b.split(', ')[0] ? `${a} – ${b.split(', ')[1]}` : `${a} – ${b}`
+}
