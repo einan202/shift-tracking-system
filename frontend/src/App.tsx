@@ -1,10 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AuthProvider, useAuth } from './auth'
 import { takeInviteToken } from './inviteLink'
-import Admin from './pages/Admin'
-import Employee from './pages/Employee'
+import NavTabs from './components/NavTabs'
 import Login from './pages/Login'
 import SetPassword from './pages/SetPassword'
+import { navigate, usePath } from './router'
+import { matchRoute, routesFor } from './routes'
+
+/** Signed-in area: tabs per role, role guard (a path outside the user's sections redirects to their default). */
+function Workspace({ role }: { role: 'Admin' | 'Employee' }) {
+  const path = usePath()
+  const routes = routesFor(role)
+  const route = matchRoute(role, path)
+  useEffect(() => {
+    if (!route) navigate(routes[0].path, true)
+  }, [route, routes])
+
+  const shown = route ?? routes[0]
+  return (
+    <>
+      <NavTabs routes={routes} current={shown.path} />
+      <div className="stack">{shown.element()}</div>
+    </>
+  )
+}
 
 function Shell() {
   const { user, logout } = useAuth()
@@ -23,7 +42,7 @@ function Shell() {
         <span className="topbar__user">{user.fullName} <span className="tag">{user.role}</span></span>
         <button className="btn btn--small" onClick={logout}>Sign out</button>
       </header>
-      <main className="page">{user.role === 'Admin' ? <Admin /> : <Employee />}</main>
+      <main className="page"><Workspace role={user.role} /></main>
     </>
   )
 }
