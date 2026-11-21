@@ -3,13 +3,17 @@
 Prerequisites: Docker.
 
 ```bash
-cp .env.example .env   # set the SQL Server password and secrets
+cp .env.example .env   # set the SQL Server password, the admin password and JWT_SECRET
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3000 (sign in as the admin from `.env`: `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`)
 - Backend API: proxied through the frontend at `/api`
 - SQL Server: host port 1434
+
+Typical flow: the admin adds an employee and sends them the one-time link; the employee chooses a password
+through that link, then clocks in and out. Clock In/Out times always come from the external Europe/Zurich
+time API (https://timeapi.io); if it is unreachable the punch is rejected and nothing is recorded.
 
 Run backend tests:
 
@@ -17,10 +21,14 @@ Run backend tests:
 docker compose run --rm backend-tests
 ```
 
-Run frontend tests:
+Opt-in live check against the real time API:
 
 ```bash
-cd frontend && npm install && npm test
+docker run --rm -e RUN_LIVE_TIME_API=1 -v "$PWD/backend":/src -w /src mcr.microsoft.com/dotnet/sdk:10.0 dotnet test --filter LiveTimeApiSmokeTests
 ```
 
-(These commands become valid as the corresponding parts are added.)
+Run frontend tests and checks:
+
+```bash
+cd frontend && npm install && npm test && npm run lint && npm run build
+```
