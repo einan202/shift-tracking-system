@@ -24,7 +24,7 @@ it('shows the employee screen for an employee session', async () => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => ({
     ok: true, status: 200,
     json: async () => (url.includes('/status') ? { clockedIn: false, record: null }
-      : { year: 2026, month: 2, defaultShiftMinutes: 480, days: [], totals: { workedMinutes: 0, expectedMinutes: 0, differenceMinutes: 0, daysWorked: 0 } }),
+      : { year: 2026, month: 2, zurichToday: '2026-02-10', days: [], monthToDate: { workedMinutes: 0, expectedMinutes: 0, balanceMinutes: 0 }, wholeMonth: { expectedMinutes: 0 } }),
   })))
   render(<App />)
   expect(await screen.findByRole('button', { name: 'Clock in' })).toBeTruthy()

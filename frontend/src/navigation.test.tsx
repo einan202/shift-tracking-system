@@ -3,13 +3,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 import { resetInviteTokenForTests } from './inviteLink'
 
-const emptyMonth = { year: 2026, month: 2, defaultShiftMinutes: 480, days: [], totals: { workedMinutes: 0, expectedMinutes: 0, differenceMinutes: 0, daysWorked: 0 } }
+const emptySheet = { year: 2026, month: 2, zurichToday: '2026-02-10', days: [], monthToDate: { workedMinutes: 0, expectedMinutes: 0, balanceMinutes: 0 }, wholeMonth: { expectedMinutes: 0 } }
 
 function stubApi() {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
     const body =
       url.includes('/attendance/status') ? { clockedIn: false, record: null }
-      : url.includes('/attendance/me/month') ? emptyMonth
+      : url.includes('/attendance/me/timesheet') ? emptySheet
       : url.includes('/admin/employees') ? []
       : url.includes('/admin/settings/shift') ? { durationMinutes: 480 }
       : {}

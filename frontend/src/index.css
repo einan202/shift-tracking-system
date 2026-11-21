@@ -103,3 +103,20 @@ tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 .history { margin: .5rem 0 0; padding-left: 1.1rem; font-size: .9rem; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Timesheet (7 columns): future rows muted, today highlighted lightly, manual times orange, balance colours. */
+.summary { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: .25rem 0 1rem; }
+.summary h3 { margin: 0 0 .25rem; font-size: .9rem; color: var(--steel); }
+.summary dl { display: flex; gap: 1.25rem; margin: 0; }
+.summary dl div { display: grid; }
+.summary dt { font-size: .8rem; color: var(--steel); }
+.summary dd { margin: 0; font-weight: 700; font-size: 1.1rem; }
+.timesheet td, .timesheet th { white-space: nowrap; }
+.row--future td { color: #8b97a4; }
+.row--today td { background: #f4f8fc; }
+.manual { color: #b45309; font-weight: 700; background: #fff4e5; }
+.tag--manual { color: #b45309; border-color: #e9b872; background: #fff4e5; }
+.tag--warn { color: #9a3412; border-color: #f2a97b; }
+.bal--plus { color: var(--go); font-weight: 700; }
+.bal--minus { color: var(--signal); font-weight: 700; }
+.bal--zero { color: #6b7785; }

@@ -3,7 +3,7 @@ import AttendanceAdmin from './features/admin/AttendanceAdmin'
 import Employees from './features/admin/Employees'
 import ShiftSettings from './features/admin/ShiftSettings'
 import ClockPanel from './features/attendance/ClockPanel'
-import MonthReport from './features/attendance/MonthReport'
+import Timesheet from './features/attendance/Timesheet'
 import type { Role } from './auth'
 
 export type Route = { path: string; label: string; element: () => ReactElement }
@@ -11,7 +11,7 @@ export type Route = { path: string; label: string; element: () => ReactElement }
 // The first route of each role is its default section. Role guards below only let a user reach their own routes.
 const EMPLOYEE_ROUTES: Route[] = [
   { path: '/clock', label: 'Clock', element: () => <div className="narrow-panel"><ClockPanel /></div> },
-  { path: '/timesheet', label: 'Timesheet', element: () => <MonthReport refreshKey={0} /> },
+  { path: '/timesheet', label: 'Timesheet', element: () => <Timesheet /> },
 ]
 
 const ADMIN_ROUTES: Route[] = [
