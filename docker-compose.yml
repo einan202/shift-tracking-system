@@ -25,6 +25,7 @@ services:
       Database__AutoMigrate: "true"
       SeedAdmin__Email: ${SEED_ADMIN_EMAIL:-}
       SeedAdmin__Password: ${SEED_ADMIN_PASSWORD:-}
+      SeedDemo__Employees: ${SEED_DEMO_EMPLOYEES:-true}   # example employees on the first start only; set to false in .env to skip
       Jwt__Secret: ${JWT_SECRET:?set JWT_SECRET in .env (32+ characters)}
     depends_on:
       db:

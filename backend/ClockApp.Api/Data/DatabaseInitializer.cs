@@ -52,5 +52,13 @@ public static class DatabaseInitializer
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
         var created = await AdminSeeder.SeedAsync(db, hasher, email, password);
         logger.LogInformation(created ? "Seeded the first admin account." : "An admin already exists; seeding skipped.");
+
+        // Example employees only on the very first start (the admin was just created), and only when enabled.
+        if (created && config.GetValue<bool>("SeedDemo:Employees"))
+        {
+            var adminId = (await db.Users.AsNoTracking().FirstAsync(u => u.Role == UserRole.Admin)).Id;
+            var n = await DemoEmployeeSeeder.SeedAsync(db, adminId, TimeProvider.System.GetUtcNow());
+            logger.LogInformation("Seeded {Count} example employees (SeedDemo:Employees).", n);
+        }
     }
 }
