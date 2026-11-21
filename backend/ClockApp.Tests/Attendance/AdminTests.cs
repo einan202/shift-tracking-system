@@ -269,6 +269,59 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
         Assert.Equal(HttpStatusCode.OK, (await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-in")).StatusCode);
     }
 
+    // ---- /status and punch responses must show EFFECTIVE (corrected) times, not the original punch ----
+
+    private static async Task<JsonElement> StatusAsync(Ctx c)
+    {
+        var res = await Send(c, c.EmployeeToken, HttpMethod.Get, "/api/attendance/status");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        return await res.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    [RequiresDbFact]
+    public async Task Status_shows_the_corrected_clock_out_after_an_admin_closes_a_forgotten_clock_out()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+        var id = await PunchAsync(c, "2026-02-19T09:00:00", null); // forgot to clock out
+        await Correct(c, new { kind = "Adjust", userId = c.EmployeeId, attendanceRecordId = id, clockOutLocal = "2026-02-19T17:00:00", reason = "Forgot to clock out" });
+
+        var status = await StatusAsync(c);
+
+        Assert.False(status.GetProperty("clockedIn").GetBoolean());
+        var rec = status.GetProperty("record");
+        Assert.Equal(DateTimeOffset.Parse("2026-02-19T16:00:00Z"), rec.GetProperty("clockOutUtc").GetDateTimeOffset()); // 17:00 Zurich, not null
+        Assert.True(rec.GetProperty("isAdjusted").GetBoolean());
+    }
+
+    [RequiresDbFact]
+    public async Task Status_shows_corrected_times_for_a_closed_record()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+        var id = await PunchAsync(c, "2026-02-20T09:00:00", "2026-02-20T16:00:00"); // punched out 16:00
+        await Correct(c, new { kind = "Adjust", userId = c.EmployeeId, attendanceRecordId = id, clockInLocal = "2026-02-20T08:30:00", clockOutLocal = "2026-02-20T17:00:00", reason = "Wrong times punched" });
+
+        var rec = (await StatusAsync(c)).GetProperty("record");
+
+        Assert.Equal(DateTimeOffset.Parse("2026-02-20T07:30:00Z"), rec.GetProperty("clockInUtc").GetDateTimeOffset());   // 08:30 Zurich
+        Assert.Equal(DateTimeOffset.Parse("2026-02-20T16:00:00Z"), rec.GetProperty("clockOutUtc").GetDateTimeOffset());  // 17:00 Zurich
+    }
+
+    [RequiresDbFact]
+    public async Task Clock_out_response_reports_the_effective_clock_in()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+        var id = await PunchAsync(c, "2026-02-23T09:00:00", null);
+        await Correct(c, new { kind = "Adjust", userId = c.EmployeeId, attendanceRecordId = id, clockInLocal = "2026-02-23T08:30:00", reason = "Started earlier than punched" });
+
+        c.Time.SetZurich("2026-02-23T17:00:00", dst: false);
+        var res = await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-out");
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var rec = (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("record");
+        Assert.Equal(DateTimeOffset.Parse("2026-02-23T07:30:00Z"), rec.GetProperty("clockInUtc").GetDateTimeOffset()); // corrected 08:30, not the punched 09:00
+        Assert.Equal(DateTimeOffset.Parse("2026-02-23T16:00:00Z"), rec.GetProperty("clockOutUtc").GetDateTimeOffset());
+    }
+
     [RequiresDbFact]
     public async Task Add_overlapping_an_open_record_is_rejected()
     {
