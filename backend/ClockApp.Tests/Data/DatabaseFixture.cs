@@ -1,3 +1,4 @@
+using ClockApp.Api.Data;
 using ClockApp.Attendance;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,12 @@ public sealed class DatabaseFixture : IDisposable
 {
     public static string? ServerConnection => Environment.GetEnvironmentVariable("TEST_DB_CONNECTION");
 
+    // Least-privilege application login used by the API under test (same shape as production).
+    public const string AppUser = "clockapp_test_app";
+    public const string AppPassword = "Test-App-Passw0rd-9x!";
+
     private readonly string? _connectionString;
+    private readonly string? _appConnectionString;
 
     public DatabaseFixture()
     {
@@ -30,9 +36,14 @@ public sealed class DatabaseFixture : IDisposable
             InitialCatalog = $"ClockApp_Test_{Guid.NewGuid():N}",
         };
         _connectionString = builder.ConnectionString;
+        _appConnectionString = new SqlConnectionStringBuilder(_connectionString) { UserID = AppUser, Password = AppPassword }.ConnectionString;
         using var db = CreateContext();
         db.Database.Migrate();
+        AppUserProvisioner.EnsureAsync(_connectionString, _appConnectionString).GetAwaiter().GetResult();
     }
+
+    /// <summary>Connection string of the least-privilege user. API integration tests use it, so they run with real permissions.</summary>
+    public string AppConnectionString => _appConnectionString ?? throw new InvalidOperationException("No test database configured.");
 
     public string ConnectionString => _connectionString ?? throw new InvalidOperationException("No test database configured.");
 

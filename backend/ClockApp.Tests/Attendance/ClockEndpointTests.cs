@@ -46,7 +46,7 @@ public sealed class ClockEndpointTests : IClassFixture<DatabaseFixture>
     private async Task<(Session s, ApiFactory f)> StartAsync(string role = "Employee")
     {
         var stub = new StubTimeSource();
-        var factory = new ApiFactory(_db.ConnectionString) { TimeSource = stub };
+        var factory = new ApiFactory(_db.AppConnectionString) { TimeSource = stub };
         var client = factory.CreateClient();
 
         var email = $"clock-{Guid.NewGuid():N}@test.local";

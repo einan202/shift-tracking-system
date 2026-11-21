@@ -58,6 +58,8 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
         var res = await client.SendAsync(Authed(HttpMethod.Post, "/api/admin/employees", adminToken, new { email, fullName = "Eve Employee" }));
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         var json = await res.Content.ReadFromJsonAsync<JsonElement>();
+        // The token travels in the URL fragment (never sent to the server, so not in access logs), not the query string.
+        Assert.Equal($"/set-password#token={json.GetProperty("inviteToken").GetString()}", json.GetProperty("invitePath").GetString());
         return (email, json.GetProperty("inviteToken").GetString()!);
     }
 
@@ -65,7 +67,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     public async Task Login_succeeds_and_token_carries_the_database_role()
     {
         await EnsureAdminAsync();
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
 
         var token = await LoginAsync(client, AdminEmail, AdminPassword);
@@ -79,7 +81,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     public async Task Wrong_password_and_unknown_email_give_the_same_generic_401()
     {
         await EnsureAdminAsync();
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
 
         var wrong = await client.PostAsJsonAsync("/api/auth/login", new { email = AdminEmail, password = "nope-nope-nope" });
@@ -93,7 +95,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Protected_routes_need_a_token_and_admin_routes_need_the_admin_role()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (email, invite) = await CreateEmployeeAsync(client);
         await client.PostAsJsonAsync("/api/auth/set-password", new { token = invite, password = "employee-pass-123" });
@@ -109,7 +111,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Invite_flow_sets_the_password_once_and_stores_only_hashes()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (email, invite) = await CreateEmployeeAsync(client);
 
@@ -137,7 +139,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Created_invite_is_stored_hashed_not_raw()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (email, invite) = await CreateEmployeeAsync(client);
 
@@ -153,7 +155,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     public async Task Expired_invite_is_rejected()
     {
         var clock = new FakeClock(DateTimeOffset.UtcNow);
-        await using var factory = new ApiFactory(_db.ConnectionString, clock: clock);
+        await using var factory = new ApiFactory(_db.AppConnectionString, clock: clock);
         var client = factory.CreateClient();
         var (_, invite) = await CreateEmployeeAsync(client);
 
@@ -166,7 +168,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Short_password_and_unknown_token_are_rejected()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (_, invite) = await CreateEmployeeAsync(client);
 
@@ -180,7 +182,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Deactivated_user_is_locked_out_even_with_a_valid_token()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (email, invite) = await CreateEmployeeAsync(client);
         await client.PostAsJsonAsync("/api/auth/set-password", new { token = invite, password = "employee-pass-123" });
@@ -206,7 +208,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
         var admin = await EnsureAdminAsync();
         // Token issued two hours ago by the (fake-clock) token service has already expired.
         var old = new FakeClock(DateTimeOffset.UtcNow.AddHours(-2));
-        await using var factory = new ApiFactory(_db.ConnectionString, clock: old);
+        await using var factory = new ApiFactory(_db.AppConnectionString, clock: old);
         var client = factory.CreateClient();
         var token = await LoginAsync(client, AdminEmail, AdminPassword);
 
@@ -219,7 +221,7 @@ public sealed class AuthTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Employee_creation_rejects_duplicates_and_bad_input()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         await EnsureAdminAsync();
         var admin = await LoginAsync(client, AdminEmail, AdminPassword);

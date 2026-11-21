@@ -50,7 +50,7 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
     private async Task<Ctx> StartAsync()
     {
         var stub = new StubTimeSource();
-        var factory = new ApiFactory(_db.ConnectionString) { TimeSource = stub };
+        var factory = new ApiFactory(_db.AppConnectionString) { TimeSource = stub };
         var client = factory.CreateClient();
         var admin = await CreateUserAsync(UserRole.Admin, "Test Admin");
         var emp = await CreateUserAsync(UserRole.Employee, "Test Employee");
@@ -129,7 +129,7 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
         // The fake clock stays near the real time so login tokens remain valid; the conversion itself
         // (including the cross-midnight case) is covered by ZurichLocalInputTests.
         var clock = new FakeClock(DateTimeOffset.UtcNow);
-        var factory = new ApiFactory(_db.ConnectionString, clock: clock);
+        var factory = new ApiFactory(_db.AppConnectionString, clock: clock);
         await using var _ = factory;
         var client = factory.CreateClient();
         var admin = await CreateUserAsync(UserRole.Admin, "Clock Admin");
@@ -218,7 +218,7 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
     }
 
     [RequiresDbFact]
-    public async Task Clock_out_must_be_after_the_corrected_clock_in()
+    public async Task Clock_out_before_the_corrected_clock_in_is_a_409_conflict_and_records_nothing()
     {
         var c = await StartAsync(); await using var _ = c.Factory;
         var id = await PunchAsync(c, "2026-02-17T09:00:00", null);
@@ -230,10 +230,16 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
         c.Time.SetZurich("2026-02-17T09:30:00", dst: false);
         var res = await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-out");
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, res.StatusCode);
+        // A data conflict with the admin's correction (409), not a time-provider outage (503).
+        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        Assert.Contains("corrected to 2026-02-17 10:00", await res.Content.ReadAsStringAsync());
         var rec = Assert.Single(await RecordsAsync(c.EmployeeId));
         Assert.True(rec.IsOpen);
         Assert.Null(rec.ClockOutUtc);
+
+        // Once the provider time is after the corrected clock-in, the same clock-out succeeds.
+        c.Time.SetZurich("2026-02-17T10:30:00", dst: false);
+        Assert.Equal(HttpStatusCode.OK, (await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-out")).StatusCode);
     }
 
     [RequiresDbFact]
@@ -381,6 +387,6 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
 
         var invite = await Send(c, c.AdminToken, HttpMethod.Post, $"/api/admin/employees/{c.EmployeeId}/invite");
         var json = await invite.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.StartsWith("/set-password?token=", json.GetProperty("invitePath").GetString());
+        Assert.StartsWith("/set-password#token=", json.GetProperty("invitePath").GetString());
     }
 }

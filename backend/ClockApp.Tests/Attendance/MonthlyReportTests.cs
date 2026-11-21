@@ -159,7 +159,7 @@ public sealed class MonthlyReportEndpointTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Report_contains_only_the_callers_own_records_and_applies_corrections()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (alice, aliceToken) = await NewEmployeeAsync(client);
         var (bob, bobToken) = await NewEmployeeAsync(client);
@@ -193,7 +193,7 @@ public sealed class MonthlyReportEndpointTests : IClassFixture<DatabaseFixture>
     [RequiresDbFact]
     public async Task Invalid_month_is_400_and_anonymous_is_401()
     {
-        await using var factory = new ApiFactory(_db.ConnectionString);
+        await using var factory = new ApiFactory(_db.AppConnectionString);
         var client = factory.CreateClient();
         var (_, token) = await NewEmployeeAsync(client);
 
