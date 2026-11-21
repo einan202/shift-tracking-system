@@ -2,6 +2,9 @@ namespace ClockApp.Attendance.Entities;
 
 public enum UserRole { Admin, Employee }
 
+/// <summary>How the employee is paid. Hourly is stored for the future but not offered yet.</summary>
+public enum PayType { Monthly, Hourly }
+
 public class User
 {
     public int Id { get; set; }
@@ -17,4 +20,9 @@ public class User
 
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
+
+    public PayType PayType { get; set; } = PayType.Monthly;
+
+    /// <summary>First day of employment (employees only). Months before it are never required or expected.</summary>
+    public DateOnly? EmploymentStartDate { get; set; }
 }

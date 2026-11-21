@@ -94,6 +94,7 @@ public sealed class CorrectionService(AttendanceDbContext db)
             PreviousClockInUtc = target?.In,
             PreviousClockOutUtc = target?.Out,
             Reason = reason,
+            ReasonCode = ReasonCodes.Other,   // admin-typed free text (the standard reasons are for employee edits)
             CreatedByUserId = adminUserId,
             CreatedAtUtc = nowUtc,
         };
