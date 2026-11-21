@@ -1,0 +1,12 @@
+P:System.DateTime.Now;Attendance code must not read the server clock; times come from IAttendanceTimeSource (external Europe/Zurich API)
+P:System.DateTime.UtcNow;Attendance code must not read the server clock; times come from IAttendanceTimeSource (external Europe/Zurich API)
+P:System.DateTime.Today;Attendance code must not read the server clock; times come from IAttendanceTimeSource (external Europe/Zurich API)
+P:System.DateTimeOffset.Now;Attendance code must not read the server clock; times come from IAttendanceTimeSource (external Europe/Zurich API)
+P:System.DateTimeOffset.UtcNow;Attendance code must not read the server clock; times come from IAttendanceTimeSource (external Europe/Zurich API)
+M:System.TimeProvider.GetUtcNow();Attendance code must not read the server clock
+M:System.TimeProvider.GetLocalNow();Attendance code must not read the server clock
+P:System.TimeProvider.System;Attendance code must not use the system clock provider
+M:System.Diagnostics.Stopwatch.GetTimestamp();Attendance code must not read local clocks, including monotonic timestamps
+M:System.Diagnostics.Stopwatch.StartNew();Attendance code must not read local clocks, including monotonic timestamps
+P:System.Environment.TickCount;Attendance code must not read local clocks, including tick counts
+P:System.Environment.TickCount64;Attendance code must not read local clocks, including tick counts

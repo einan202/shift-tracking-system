@@ -1,0 +1,55 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+    ports:
+      - "1434:1433"   # 1433 is commonly used by other local SQL Server containers
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  backend:
+    build: ./backend
+    environment:
+      # The running app uses a least-privilege user (created at startup); sa is used only for migrations/provisioning.
+      ConnectionStrings__Default: "Server=db;Database=ClockApp;User Id=clockapp_app;Password=${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env};TrustServerCertificate=True"
+      ConnectionStrings__Migration: "Server=db;Database=ClockApp;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      Database__AutoMigrate: "true"
+      SeedAdmin__Email: ${SEED_ADMIN_EMAIL:-}
+      SeedAdmin__Password: ${SEED_ADMIN_PASSWORD:-}
+      Jwt__Secret: ${JWT_SECRET:?set JWT_SECRET in .env (32+ characters)}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # Run with: docker compose run --rm backend-tests
+  backend-tests:
+    profiles: ["test"]
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /src
+    volumes:
+      - ./backend:/src
+    environment:
+      TEST_DB_CONNECTION: "Server=db;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: dotnet test
+
+volumes:
+  sqldata:

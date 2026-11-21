@@ -1,0 +1,17 @@
+# .NET build output
+bin/
+obj/
+*.dll
+*.pdb
+
+# Frontend
+node_modules/
+dist/
+
+# Local secrets / OS
+.env
+.DS_Store
+
+# Local verification stamp
+.claude/last-verified
+.claude/verify-blocks
