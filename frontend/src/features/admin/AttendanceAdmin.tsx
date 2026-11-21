@@ -62,8 +62,8 @@ export default function AttendanceAdmin() {
     <section className="panel">
       <header className="panel__head">
         <h2>Attendance</h2>
-        <div className="row row--wrap">
-          <label className="inline">Employee
+        <div className="row row--wrap att-toolbar">
+          <label className="inline att-toolbar__employee">Employee
             <select value={userId ?? ''} onChange={(e) => { setUserId(Number(e.target.value)); setYm(null) }}>
               {employees.map((e) => <option key={e.id} value={e.id}>{e.fullName}</option>)}
             </select>
@@ -71,7 +71,7 @@ export default function AttendanceAdmin() {
           {shown && (
             <>
               <button className="btn btn--small" onClick={() => step(-1)} aria-label="Previous month">‹</button>
-              <strong className="num">{shown.year}-{pad(shown.month)}</strong>
+              <strong className="num att-toolbar__month">{shown.year}-{pad(shown.month)}</strong>
               <button className="btn btn--small" onClick={() => step(1)} aria-label="Next month">›</button>
             </>
           )}
@@ -83,20 +83,26 @@ export default function AttendanceAdmin() {
       {view && view.records.length === 0 && <p className="muted">No records in this month.</p>}
       {view && view.records.length > 0 && (
         <div className="table-wrap">
-          <table>
-            <thead><tr><th>Day</th><th>Recorded (API time)</th><th>Counts as</th><th /></tr></thead>
+          <table className="att-admin">
+            <thead><tr><th>Day</th><th className="col-punched">Punched (API time)</th><th>Counted as</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
-              {view.records.map((r) => (
-                <tr key={r.recordId ?? `m${r.history[0]?.id}`}>
-                  <td>{formatDay(r.effective.workDate)}</td>
-                  <td className="num">
-                    {r.original ? `${formatTime(r.original.clockInUtc)} – ${r.original.clockOutUtc ? formatTime(r.original.clockOutUtc) : 'open'}` : <span className="muted">manual entry</span>}
+              {view.records.map((r, i) => {
+                const sameDay = i > 0 && view.records[i - 1].effective.workDate === r.effective.workDate // date shown once per day
+                const punched = r.original
+                  ? `${formatTime(r.original.clockInUtc)} – ${r.original.clockOutUtc ? formatTime(r.original.clockOutUtc) : 'open'}`
+                  : null
+                return (
+                <tr key={r.recordId ?? `m${r.history[0]?.id}`} className={sameDay ? 'att-admin__more' : undefined}>
+                  <td className="att-admin__day">{sameDay ? <span className="sr-only">{formatDay(r.effective.workDate)}</span> : formatDay(r.effective.workDate)}</td>
+                  <td className="num col-punched">
+                    {punched ?? <span className="muted">manual entry</span>}
                   </td>
                   <td className={`num ${r.isVoided ? 'voided' : ''}`}>
                     {r.isVoided && <span className="tag tag--warn">deleted</span>}
                     {formatTime(r.effective.clockInUtc)} – {r.effective.clockOutUtc ? formatTime(r.effective.clockOutUtc) : <em>missing clock-out</em>}
                     {r.source === 'manual' && <span className="tag">added</span>}
                     {r.isAdjusted && !r.isVoided && <span className="tag">corrected</span>}
+                    <span className="punched-sub muted">{punched ? `Punched ${punched}` : 'Manual entry'}</span>
                     {r.history.length > 0 && (
                       <details>
                         <summary>History ({r.history.length})</summary>
@@ -121,7 +127,8 @@ export default function AttendanceAdmin() {
                     )}
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
