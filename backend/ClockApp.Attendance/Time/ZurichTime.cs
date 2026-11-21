@@ -40,4 +40,44 @@ public static class ZurichTime
         var instant = new DateTimeOffset(local, offset).ToUniversalTime();
         return new AttendanceTime(instant, local, offset, dstActive, provider);
     }
+
+    /// <summary>
+    /// Converts an admin-typed Zurich wall-clock time to a UTC instant (for corrections, never for punches).
+    /// Nonexistent times (spring-forward gap) are rejected; ambiguous times (fall-back hour) need the
+    /// UTC offset in minutes (+60 or +120) to say which occurrence is meant.
+    /// </summary>
+    /// <exception cref="InvalidLocalTimeException"/>
+    public static DateTimeOffset LocalToUtc(DateTime local, int? offsetMinutes = null)
+    {
+        local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+
+        if (Zone.IsInvalidTime(local))
+            throw new InvalidLocalTimeException($"{local:yyyy-MM-dd HH:mm} does not exist in Europe/Zurich (clocks skip this hour).");
+
+        TimeSpan offset;
+        if (Zone.IsAmbiguousTime(local))
+        {
+            var options = Zone.GetAmbiguousTimeOffsets(local);
+            if (offsetMinutes is null)
+                throw new InvalidLocalTimeException(
+                    $"{local:yyyy-MM-dd HH:mm} happens twice in Europe/Zurich; specify the UTC offset in minutes (60 or 120).");
+            var match = options.Where(o => (int)o.TotalMinutes == offsetMinutes).Cast<TimeSpan?>().FirstOrDefault();
+            offset = match ?? throw new InvalidLocalTimeException("The UTC offset must be 60 or 120 minutes for this ambiguous time.");
+        }
+        else
+        {
+            offset = Zone.GetUtcOffset(local);
+            if (offsetMinutes is not null && (int)offset.TotalMinutes != offsetMinutes)
+                throw new InvalidLocalTimeException(
+                    $"The UTC offset {offsetMinutes} does not match Europe/Zurich at {local:yyyy-MM-dd HH:mm} (expected {(int)offset.TotalMinutes}).");
+        }
+        return new DateTimeOffset(local, offset).ToUniversalTime();
+    }
+
+    /// <summary>The Europe/Zurich date of a UTC instant (rule-based conversion, not a clock read).</summary>
+    public static DateOnly LocalDateOf(DateTimeOffset utc) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(utc, Zone).DateTime);
 }
+
+/// <summary>An admin-entered local time is nonexistent, ambiguous or inconsistent.</summary>
+public sealed class InvalidLocalTimeException(string message) : Exception(message);

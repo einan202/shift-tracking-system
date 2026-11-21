@@ -63,3 +63,44 @@ public class ZurichTimeTests
         Assert.Equal(new DateOnly(2026, 5, 31), DateOnly.FromDateTime(t.UtcInstant.UtcDateTime));
     }
 }
+
+public class ZurichLocalInputTests
+{
+    [Fact]
+    public void Ordinary_winter_and_summer_times_convert_with_the_zone_offset()
+    {
+        Assert.Equal(DateTimeOffset.Parse("2026-11-20T07:00:00Z"), ZurichTime.LocalToUtc(new DateTime(2026, 11, 20, 8, 0, 0)));
+        Assert.Equal(DateTimeOffset.Parse("2026-07-01T06:00:00Z"), ZurichTime.LocalToUtc(new DateTime(2026, 7, 1, 8, 0, 0)));
+    }
+
+    [Fact]
+    public void Nonexistent_spring_forward_time_is_rejected()
+    {
+        Assert.Throws<InvalidLocalTimeException>(() => ZurichTime.LocalToUtc(new DateTime(2026, 3, 29, 2, 30, 0)));
+    }
+
+    [Fact]
+    public void Ambiguous_fall_back_time_needs_an_offset_and_each_offset_gives_a_different_instant()
+    {
+        var local = new DateTime(2026, 10, 25, 2, 30, 0);
+
+        Assert.Throws<InvalidLocalTimeException>(() => ZurichTime.LocalToUtc(local));
+        Assert.Equal(DateTimeOffset.Parse("2026-10-25T00:30:00Z"), ZurichTime.LocalToUtc(local, 120)); // first, CEST
+        Assert.Equal(DateTimeOffset.Parse("2026-10-25T01:30:00Z"), ZurichTime.LocalToUtc(local, 60));  // second, CET
+        Assert.Throws<InvalidLocalTimeException>(() => ZurichTime.LocalToUtc(local, 90));
+    }
+
+    [Fact]
+    public void An_offset_that_contradicts_the_zone_rules_is_rejected()
+    {
+        Assert.Throws<InvalidLocalTimeException>(() => ZurichTime.LocalToUtc(new DateTime(2026, 7, 1, 8, 0, 0), 60));
+        Assert.Equal(DateTimeOffset.Parse("2026-07-01T06:00:00Z"), ZurichTime.LocalToUtc(new DateTime(2026, 7, 1, 8, 0, 0), 120));
+    }
+
+    [Fact]
+    public void Local_date_of_an_instant_uses_zurich_not_utc()
+    {
+        Assert.Equal(new DateOnly(2026, 7, 1), ZurichTime.LocalDateOf(DateTimeOffset.Parse("2026-06-30T22:30:00Z")));
+        Assert.Equal(new DateOnly(2026, 12, 31), ZurichTime.LocalDateOf(DateTimeOffset.Parse("2026-12-31T22:30:00Z")));
+    }
+}
