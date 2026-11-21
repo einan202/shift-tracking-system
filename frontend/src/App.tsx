@@ -38,7 +38,7 @@ function Shell() {
   return (
     <>
       <header className="topbar">
-        <strong className="brand">Shift tracking</strong>
+        <strong className="brand">Shift Tracking</strong>
         <span className="topbar__user">{user.fullName} <span className="tag">{user.role}</span></span>
         <button className="btn btn--small" onClick={logout}>Sign out</button>
       </header>

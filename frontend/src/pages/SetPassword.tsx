@@ -22,14 +22,16 @@ export default function SetPassword({ token }: { token: string }) {
 
   if (done) {
     return (
-      <main className="narrow">
+      <main className="narrow auth">
+        <p className="auth__brand">Shift Tracking</p>
         <h1>Password saved</h1>
         <p><a href="/">Go to sign in</a></p>
       </main>
     )
   }
   return (
-    <main className="narrow">
+    <main className="narrow auth">
+      <p className="auth__brand">Shift Tracking</p>
       <h1>Choose your password</h1>
       <form onSubmit={submit} className="stack">
         <label>New password (at least 10 characters)
