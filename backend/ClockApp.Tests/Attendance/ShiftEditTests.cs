@@ -15,7 +15,7 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
     // "Now" = Tuesday 2026-02-10 13:00 Zurich (12:00 UTC). Employee works Mon/Tue 8h30.
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-02-10T12:00:00Z");
 
-    private sealed record Setup(ApiFactory Factory, HttpClient Client, int UserId, long OpenRecordId, long ClosedRecordId);
+    private sealed record Setup(FakeClock Fake, ApiFactory Factory, HttpClient Client, int UserId, long OpenRecordId, long ClosedRecordId);
 
     private async Task<Setup> ArrangeAsync()
     {
@@ -39,7 +39,7 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
         var token = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString()!;
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         fake.Now = Now;                                    // then pin "now" for the edits
-        return new Setup(factory, client, emp.Id, open.Id, closed.Id);
+        return new Setup(fake, factory, client, emp.Id, open.Id, closed.Id);
     }
 
     private static object Edit(string date, string? inLocal, string? outLocal, string code = "ForgotClockOut", string? text = null) =>
@@ -209,6 +209,30 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
 
         // Re-adding the day is allowed afterwards.
         Assert.Equal(HttpStatusCode.OK, (await s.Client.PostAsJsonAsync("/api/attendance/me/shifts", Edit("2026-02-02", "2026-02-02T08:00:00", "2026-02-02T16:00:00", "ForgotClockIn"))).StatusCode);
+    }
+
+    [ClockApp.Tests.Data.RequiresDbFact]
+    public async Task Admin_history_of_a_manual_shift_lists_the_add_and_every_later_correction()
+    {
+        var s = await ArrangeAsync();
+        await using var _ = s.Factory;
+        async Task Ok(object body) => Assert.Equal(HttpStatusCode.OK, (await s.Client.PostAsJsonAsync("/api/attendance/me/shifts", body)).StatusCode);
+        await Ok(Edit("2026-02-03", null, "2026-02-03T17:00:00"));                                                   // closes the open shift
+        await Ok(Edit("2026-02-09", "2026-02-09T08:00:00", "2026-02-09T16:00:00", "ForgotClockIn"));                  // adds a manual shift
+        await Ok(Edit("2026-02-09", null, "2026-02-09T17:00:00", "WrongTimePunched"));                                // corrects its clock-out
+
+        var admin = new User { Email = $"ha-{Guid.NewGuid():N}@t.local", FullName = "Hist Admin", Role = UserRole.Admin };
+        admin.PasswordHash = new Microsoft.AspNetCore.Identity.PasswordHasher<User>().HashPassword(admin, "test-password-123");
+        await using (var db = _db.CreateContext()) { db.Users.Add(admin); await db.SaveChangesAsync(); }
+        var ac = s.Factory.CreateClient();
+        s.Fake.Now = DateTimeOffset.UtcNow;   // token lifetime is checked against real time
+        var login = await ac.PostAsJsonAsync("/api/auth/login", new { email = admin.Email, password = "test-password-123" });
+        ac.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString()!);
+
+        var res = await ac.GetFromJsonAsync<JsonElement>($"/api/admin/attendance?userId={s.UserId}&from=2026-02-01&to=2026-02-28");
+        var manual = res.GetProperty("records").EnumerateArray().Single(r => r.GetProperty("source").GetString() == "manual");
+        var kinds = manual.GetProperty("history").EnumerateArray().Select(h => h.GetProperty("kind").GetString()).ToArray();
+        Assert.Equal(new string?[] { "Add", "Adjust" }, kinds);   // both changes, in order
     }
 
     [ClockApp.Tests.Data.RequiresDbFact]

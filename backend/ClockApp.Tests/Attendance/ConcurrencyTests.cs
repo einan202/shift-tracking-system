@@ -92,4 +92,52 @@ public sealed class ConcurrencyTests : IClassFixture<DatabaseFixture>
         // Informational: which side tended to win (both orders are legal).
         Assert.Equal(Rounds, punchWins + correctionWins);
     }
+
+    [RequiresDbFact]
+    public async Task An_employee_shift_edit_racing_their_own_clock_in_never_leaves_overlapping_records()
+    {
+        for (var round = 0; round < Rounds; round++)
+        {
+            int employeeId;
+            await using (var setup = _db.CreateContext())
+            {
+                var e = new User { Email = $"race-s-{Guid.NewGuid():N}@test.local", FullName = "Race Employee", Role = UserRole.Employee };
+                setup.Users.Add(e);
+                await setup.SaveChangesAsync();
+                employeeId = e.Id;
+            }
+            var punchTime = ZurichTime.FromLocal(new DateTime(2026, 2, 20, 10, 15, 0), dstActive: false, "stub");
+            var edit = new ShiftEditRequest(employeeId, new DateOnly(2026, 2, 20),
+                DateTimeOffset.Parse("2026-02-20T09:00:00Z"), DateTimeOffset.Parse("2026-02-20T09:30:00Z"), ReasonCodes.ForgotClockIn, null);
+            var serverNow = DateTimeOffset.Parse("2026-11-21T12:00:00Z");
+            using var barrier = new Barrier(2);
+
+            var punch = Task.Run(async () =>
+            {
+                await using var db = AppContext();
+                var svc = new AttendanceService(db, new FixedTime(punchTime));
+                barrier.SignalAndWait();
+                return await svc.ClockInAsync(employeeId);
+            });
+            var fix = Task.Run(async () =>
+            {
+                await using var db = AppContext();
+                var svc = new ShiftEditService(db, new AlwaysOpenMonthState());
+                barrier.SignalAndWait();
+                try { await svc.CommitAsync(edit, serverNow); return true; }
+                catch (CorrectionException) { return false; }
+            });
+            await Task.WhenAll(punch, fix);
+
+            var punchWon = punch.Result.Outcome == ClockOutcome.Recorded;
+            // Either order is legal: if the punch landed first the edit adjusts that punch (same day), otherwise the
+            // edit adds a manual shift and the punch is refused. Never two overlapping effective records.
+            Assert.True(punchWon || fix.Result, $"round {round}: both rejected");
+            if (!punchWon) Assert.Equal(ClockOutcome.OverlapsExisting, punch.Result.Outcome);
+
+            await using var verify = _db.CreateContext();
+            var records = await EffectiveAttendance.LoadAsync(verify, employeeId);
+            Assert.Single(records);
+        }
+    }
 }
