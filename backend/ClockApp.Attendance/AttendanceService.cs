@@ -17,6 +17,8 @@ public enum ClockOutcome
     OverlapsExisting,
     /// <summary>Clock-out time is not after the clock-in an admin CORRECTED (a data conflict, not a time-provider fault).</summary>
     ConflictsWithCorrection,
+    /// <summary>Clock-in on a day the employee's schedule does not include (e.g. the weekend). Clock-out is never blocked.</summary>
+    NonWorkingDay,
 }
 
 public sealed record ClockResult(ClockOutcome Outcome, AttendanceRecord? Record, DateTimeOffset? CorrectedClockIn = null);
@@ -39,6 +41,16 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
 
         // Network I/O happens BEFORE touching the database, so no locks/transactions are held while waiting.
         var now = await timeSource.GetNowAsync(ct);
+
+        // Only working days of the applicable schedule version can be started (clock-out is never blocked, so an
+        // open shift can always be closed). Employees without any schedule version are not restricted.
+        var versions = await db.EmployeeScheduleVersions.AsNoTracking().Where(v => v.UserId == userId).ToListAsync(ct);
+        if (versions.Count > 0)
+        {
+            var start = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.EmploymentStartDate).SingleAsync(ct);
+            if (ScheduleResolver.ExpectedMinutes(versions, now.LocalDate, start) == 0)
+                return new ClockResult(ClockOutcome.NonWorkingDay, null);
+        }
 
         // Serialise with admin corrections / other punches of this user (see UserLock).
         await using var tx = await db.Database.BeginTransactionAsync(ct);
