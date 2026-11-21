@@ -101,3 +101,10 @@ Frontend only (`AttendanceAdmin.tsx`, `index.css`); palette, tags, dialog, data 
 - **Records:** grouped under a day band (date plus record count); the counted time is the main element with orange "corrected"/"added" and "deleted" tags beside it; the punched time is muted in its own column; History opens as a full-width panel under the record.
 - **Phones:** bar stacked with 44 px controls, the table reduced to one column (header hidden), punched time folded under the counted time, full-width history, no horizontal scroll at 375 px.
 - Checked in the browser at 375 and 1280 px; no console errors. Not checked: other months/employees with deleted or manual-only rows (covered by API tests, not by this view).
+
+## Employee Timesheet and Clock: visual consistency pass
+Frontend only (`Timesheet.tsx`, `ClockPanel.tsx`, `index.css`); no data, calculation, permission or workflow change. Employees still see one consolidated shift per day and no history; the table keeps its 7 columns plus the hidden actions column, so existing tests are unchanged.
+- **Timesheet:** panel title "Timesheet" with the joined month stepper (same control as Admin Attendance); the summary is two tinted tiles (Month to date with Worked/Expected/Balance, Whole month); rows are more spacious, Worked is emphasised, non-working days without a shift are muted, today has a red accent bar, Manual keeps its orange cell and tag.
+- **Phones (≤720 px):** each day becomes a compact card (date, weekday and balance on top; clock-in, clock-out, worked; expected and the Edit/Add/Delete buttons at 44 px), implemented with CSS only plus `data-label` attributes; empty cells are hidden so non-working days stay one line; no horizontal scroll at 375 px.
+- **Clock:** a "Clock" heading like the other panels and a status box with a left accent bar (red while on shift); the punch button and behaviour are unchanged.
+- Checked in the browser at 375 and 1280 px with a throwaway employee (since deactivated), no console errors. Not exercised in the browser: an actual Clock In/Out press, the Edit/Delete dialogs (covered by their unit tests), and in-progress/needs-correction rows.
