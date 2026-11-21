@@ -92,6 +92,9 @@ public static class ZurichTime
         return new DateTimeOffset(local, offset).ToUniversalTime();
     }
 
+    /// <summary>The Europe/Zurich wall-clock time of a UTC instant (rule-based conversion, not a clock read).</summary>
+    public static DateTime ToLocal(DateTimeOffset utc) => TimeZoneInfo.ConvertTime(utc, Zone).DateTime;
+
     /// <summary>The Europe/Zurich date of a UTC instant (rule-based conversion, not a clock read).</summary>
     public static DateOnly LocalDateOf(DateTimeOffset utc) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(utc, Zone).DateTime);

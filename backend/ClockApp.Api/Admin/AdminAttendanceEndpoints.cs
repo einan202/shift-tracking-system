@@ -64,7 +64,10 @@ public static class AdminAttendanceEndpoints
                         createdAtUtc = c.CreatedAtUtc,
                     }),
             });
-            return Results.Ok(new { from = f, to = t, records = rows });
+            // Zurich "now" lets the UI default and cap the correction form in Zurich time, whatever the admin's
+            // browser time zone is (server clock: used for UI defaults/validation only, nothing is recorded).
+            var zurichNow = ZurichTime.ToLocal(clock.GetUtcNow()).ToString("yyyy-MM-dd'T'HH:mm");
+            return Results.Ok(new { from = f, to = t, zurichNow, records = rows });
         });
 
         group.MapPost("corrections", async (CorrectionDto dto, ClaimsPrincipal admin, CorrectionService svc, TimeProvider clock, CancellationToken ct) =>
