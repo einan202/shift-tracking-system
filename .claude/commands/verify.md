@@ -16,7 +16,7 @@ description: Verify changes work end-to-end after any code change. Use this aggr
 
    - List employees (admin): `curl -s http://localhost:3000/api/admin/employees -H "Authorization: Bearer <admin token>"` — array of `{id, email, fullName, isActive, ...}` objects
 
-   - Clock in (employee): `curl -s -X POST http://localhost:3000/api/attendance/clock-in -H "Authorization: Bearer <employee token>"` — 200 with `{clockedIn: true, record}`; a second call returns 409; 503 means the external time API is down and nothing was recorded
+   - Clock in (employee): `curl -s -X POST http://localhost:3000/api/attendance/clock-in -H "Authorization: Bearer <employee token>"` — 200 with `{clockedIn: true, record}`; a second call returns 409; 503 means both external time APIs (time.now, then timeapi.io) failed and nothing was recorded
 
    - Clock out (employee): `curl -s -X POST http://localhost:3000/api/attendance/clock-out -H "Authorization: Bearer <employee token>"` — 200 with `clockOutUtc` set; without a clock-in it returns 409
 

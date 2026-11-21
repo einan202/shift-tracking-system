@@ -13,7 +13,7 @@ docker compose up --build
 
 Typical flow: the admin adds an employee and sends them the one-time link; the employee chooses a password
 through that link, then clocks in and out. Clock In/Out times always come from the external Europe/Zurich
-time API (https://timeapi.io); if it is unreachable the punch is rejected and nothing is recorded.
+time APIs (https://time.now first, https://timeapi.io as fallback); if neither answers the punch is rejected and nothing is recorded.
 
 Run backend tests:
 

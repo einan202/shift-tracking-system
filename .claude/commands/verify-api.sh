@@ -40,7 +40,7 @@ req POST /attendance/clock-in "$ADMIN"; check "admin cannot punch" 403
 req GET /attendance/status "$EMP"; check "status (not clocked in)" 200
 req POST /attendance/clock-out "$EMP"; check "clock-out without clock-in" 409
 
-# Real time API: timeapi.io sometimes answers 502, which the app turns into a legitimate fail-closed 503
+# Real time APIs (time.now, then timeapi.io as fallback). If both fail the app answers a legitimate fail-closed 503
 # (nothing recorded). Retry the punch a few times before calling it a failure.
 punch() { # punch clock-in|clock-out
   for i in 1 2 3 4; do
