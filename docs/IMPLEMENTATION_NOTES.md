@@ -85,3 +85,12 @@ Approved by the user in chat; the palette and design language are unchanged.
 - Employee count badge removed.
 - Phones: the stacked-card table was replaced by the normal table with the Starts/Email/Status columns folded under the name and a stacked actions column; no horizontal overflow at 375 px, all actions visible.
 - Unchanged: Add-employee modal, Settings per-weekday default, page-width fix, all functionality.
+
+## Admin Attendance page: targeted layout fixes (option A)
+Frontend only (`AttendanceAdmin.tsx`, `index.css`); same data, API, colours, tags and correction dialog.
+- Toolbar fits one row on desktop (employee, month stepper, "Add missing record"); on phones the employee select takes the full row.
+- Rows are grouped by day: the date shows once, later records of the same day leave it blank (kept as screen-reader text).
+- Columns renamed: "Punched (API time)" and "Counted as"; the actions column has a hidden "Actions" label.
+- Phones: the Punched column folds under the counted time, nothing is clipped, no horizontal scroll at 375 px.
+- Checked in the browser at 375 and 1280 px; no console errors.
+- Not done (option B, backlog): the employee-timesheet layout for admins (Date/Day/Worked/Expected/Balance, month summary, per-day history) needs a new endpoint (iteration 1.7).
