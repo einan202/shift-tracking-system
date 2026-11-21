@@ -31,6 +31,7 @@ Web application where employees clock in/out and admins manage employees, the de
 - **Never commit generated build artifacts** (`*.dll`, .NET `bin/` and `obj/` directories, `node_modules/`, `dist/`); keep them excluded in `.gitignore`.
 - Do not push, and do not touch other projects' containers or databases.
 - Write tests with each backend change; run them before declaring an increment done.
+- **New database tables:** the app runs as a least-privilege SQL user. Whenever a table is introduced, update its permissions in `AppUserProvisioner` (`backend/ClockApp.Api/Data/AppUserProvisioner.cs`) and add or update a test in `AppUserPermissionTests` for what the app may and may not do with it. Without a grant the app cannot touch the table.
 - Reference: the approved plan is in `.claude/plan.md`.
 
 ## Verification (automatic, no `/verify` needed)
