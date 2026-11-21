@@ -118,6 +118,27 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
     }
 
     [RequiresDbFact]
+    public async Task Admin_view_reports_zurich_now_for_form_defaults()
+    {
+        // The fake clock stays near the real time so login tokens remain valid; the conversion itself
+        // (including the cross-midnight case) is covered by ZurichLocalInputTests.
+        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var factory = new ApiFactory(_db.ConnectionString, clock: clock);
+        await using var _ = factory;
+        var client = factory.CreateClient();
+        var admin = await CreateUserAsync(UserRole.Admin, "Clock Admin");
+        var emp = await CreateUserAsync(UserRole.Employee, "Clock Employee");
+        var token = await LoginAsync(client, admin.Email);
+        var req = new HttpRequestMessage(HttpMethod.Get, $"/api/admin/attendance?userId={emp.Id}");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var json = await (await client.SendAsync(req)).Content.ReadFromJsonAsync<JsonElement>();
+
+        var expected = ClockApp.Attendance.Time.ZurichTime.ToLocal(clock.Now).ToString("yyyy-MM-dd'T'HH:mm");
+        Assert.Equal(expected, json.GetProperty("zurichNow").GetString());
+    }
+
+    [RequiresDbFact]
     public async Task Add_creates_a_manual_record_and_never_touches_punches()
     {
         var c = await StartAsync(); await using var _ = c.Factory;

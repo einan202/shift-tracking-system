@@ -98,6 +98,13 @@ public class ZurichLocalInputTests
     }
 
     [Fact]
+    public void Local_time_of_an_instant_is_zurich_wall_clock_including_across_midnight()
+    {
+        Assert.Equal(new DateTime(2031, 7, 1, 0, 30, 0), ZurichTime.ToLocal(DateTimeOffset.Parse("2031-06-30T22:30:00Z"))); // CEST
+        Assert.Equal(new DateTime(2031, 12, 31, 23, 30, 0), ZurichTime.ToLocal(DateTimeOffset.Parse("2031-12-31T22:30:00Z"))); // CET
+    }
+
+    [Fact]
     public void Local_date_of_an_instant_uses_zurich_not_utc()
     {
         Assert.Equal(new DateOnly(2026, 7, 1), ZurichTime.LocalDateOf(DateTimeOffset.Parse("2026-06-30T22:30:00Z")));
