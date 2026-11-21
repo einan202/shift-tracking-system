@@ -18,6 +18,8 @@ type View = { from: string; to: string; zurichNow: string; records: Row[] }
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const daysIn = (y: number, m: number) => [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
+const monthName = (y: number, m: number) =>
+  new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, 1))) // same wording as the employee timesheet
 const range = (y: number, m: number) => `from=${y}-${pad(m)}-01&to=${y}-${pad(m)}-${pad(daysIn(y, m))}`
 
 /** Admin view of one employee's month: original punches, effective values, and the audit history. */
@@ -71,7 +73,7 @@ export default function AttendanceAdmin() {
           {shown && (
             <>
               <button className="btn btn--small" onClick={() => step(-1)} aria-label="Previous month">‹</button>
-              <strong className="num att-toolbar__month">{shown.year}-{pad(shown.month)}</strong>
+              <strong className="att-toolbar__month" aria-live="polite">{monthName(shown.year, shown.month)}</strong>
               <button className="btn btn--small" onClick={() => step(1)} aria-label="Next month">›</button>
             </>
           )}

@@ -166,7 +166,7 @@ label .muted { font-weight: 400; }
 /* Admin attendance: compact toolbar, date once per day, phone folding */
 .att-toolbar { gap: .5rem .75rem; }
 .att-toolbar__employee select { min-width: 0; max-width: 14rem; }
-.att-toolbar__month { min-width: 4.5rem; text-align: center; }
+.att-toolbar__month { min-width: 8.5rem; text-align: center; white-space: nowrap; }
 .att-admin td.num { white-space: nowrap; }
 .att-admin__day { white-space: nowrap; font-weight: 600; }
 .att-admin details { white-space: normal; }
