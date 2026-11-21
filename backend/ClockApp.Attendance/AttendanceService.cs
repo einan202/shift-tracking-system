@@ -13,6 +13,8 @@ public enum ClockOutcome
     AlreadyClockedIn,
     /// <summary>Clock-out with no open record (never clocked in, or someone else already clocked out).</summary>
     NotClockedIn,
+    /// <summary>The API time falls inside / before an existing (e.g. admin-corrected) record of this employee.</summary>
+    OverlapsExisting,
 }
 
 public sealed record ClockResult(ClockOutcome Outcome, AttendanceRecord? Record);
@@ -36,6 +38,19 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
         // Network I/O happens BEFORE touching the database, so no locks/transactions are held while waiting.
         var now = await timeSource.GetNowAsync(ct);
 
+        // Serialise with admin corrections / other punches of this user (see UserLock).
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await UserLock.AcquireAsync(db, userId, ct);
+
+        if (await db.AttendanceRecords.AnyAsync(r => r.UserId == userId && r.IsOpen, ct))
+            return new ClockResult(ClockOutcome.AlreadyClockedIn, null);
+
+        // A new shift starts "now" and is open-ended, so it clashes with any effective record that ends after now
+        // (possible only through a correction that was made in between).
+        var effective = await EffectiveAttendance.LoadAsync(db, userId, ct: ct);
+        if (effective.Any(e => e.Out is null || e.Out > now.UtcInstant))
+            return new ClockResult(ClockOutcome.OverlapsExisting, null);
+
         var record = new AttendanceRecord
         {
             UserId = userId,
@@ -48,11 +63,11 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
         try
         {
             await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
-            // Two simultaneous clock-ins (double click / two tabs): the filtered unique index
-            // UX_OneOpenPerUser let exactly one through. The loser is a plain 409, not an error.
+            // Safety net: the filtered unique index UX_OneOpenPerUser also guarantees one open record per user.
             db.Entry(record).State = EntityState.Detached;
             return new ClockResult(ClockOutcome.AlreadyClockedIn, null);
         }
@@ -65,6 +80,9 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
             return new ClockResult(ClockOutcome.NotClockedIn, null);
 
         var now = await timeSource.GetNowAsync(ct);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await UserLock.AcquireAsync(db, userId, ct);
 
         // Atomic conditional update: the first committed clock-out wins and is never overwritten.
         // A concurrent second one matches 0 rows and becomes a 409 (its API time is discarded).
@@ -79,6 +97,7 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
         {
             var saved = await db.AttendanceRecords.AsNoTracking()
                 .Where(r => r.UserId == userId).OrderByDescending(r => r.ClockInUtc).FirstAsync(ct);
+            await tx.CommitAsync(ct);
             return new ClockResult(ClockOutcome.Recorded, saved);
         }
 

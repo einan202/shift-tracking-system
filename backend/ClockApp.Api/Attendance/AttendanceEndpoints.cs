@@ -42,6 +42,9 @@ public static class AttendanceEndpoints
     private static IResult ToResult(ClockResult result, string conflict) => result.Outcome switch
     {
         ClockOutcome.Recorded => Results.Ok(new { clockedIn = result.Record!.IsOpen, record = Dto(result.Record) }),
+        ClockOutcome.OverlapsExisting => Results.Json(
+            new { error = "This overlaps a corrected record of yours. Please contact an administrator." },
+            statusCode: StatusCodes.Status409Conflict),
         _ => Results.Json(new { error = conflict }, statusCode: StatusCodes.Status409Conflict),
     };
 
