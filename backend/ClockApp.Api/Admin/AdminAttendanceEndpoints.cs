@@ -50,7 +50,7 @@ public static class AdminAttendanceEndpoints
                 isAdjusted = e.IsAdjusted,
                 isOpen = e.IsOpen,
                 history = corrections
-                    .Where(c => e.IsManual ? c.Id == e.AddCorrectionId : c.AttendanceRecordId == e.RecordId)
+                    .Where(c => e.IsManual ? (c.Id == e.AddCorrectionId || c.TargetCorrectionId == e.AddCorrectionId) : c.AttendanceRecordId == e.RecordId)
                     .Select(c => new
                     {
                         id = c.Id,
