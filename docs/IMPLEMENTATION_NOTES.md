@@ -62,3 +62,8 @@ Facts and engineering decisions made while building `.claude/plan-attendance-day
 - **Lint:** four pre-existing `set-state-in-effect`/fast-refresh warnings remain (`auth.tsx`, `ClockPanel.tsx`, `Employees.tsx`, `AttendanceAdmin.tsx`).
 - **Mutation checks** were not run for the newest tests (admin history, delete).
 - **Local dev setup:** dev passwords and the login token in sessionStorage, as in earlier phases.
+
+## Additional requirement: independent expected hours per weekday
+- Already provided by the existing effective-dated schedule (no new scheduling architecture): seven independent `ExpectedMinutes*` per version, any combination of days, company default only prefills a newly ticked day, `ScheduleResolver`/`MonthSheet` use each date's own weekday value for Expected, Balance and totals.
+- Added verification only: pure test with Mon 8h30 / Tue 9h / Wed 7h45 / Thu 8h / Fri 6h (Expected per day, balances, whole-month total 10470 min), API round-trip with five different durations plus a later-dated change of one day keeping the others, and a form test that editing Wednesday leaves the other days untouched. The admin employee form was checked in the browser (seven independent rows, default 9h from settings).
+- Not done: a separate "redesigned" compact form; the current form is the 1.2 layout (seven rows with checkbox, hours, minutes).

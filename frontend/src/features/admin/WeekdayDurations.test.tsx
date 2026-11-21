@@ -39,3 +39,17 @@ it('keeps durations within 0..24 hours', () => {
 
   expect(last[0]).toBe(1440)
 })
+
+it('keeps every other weekday value when one day is edited (Mon 8h30, Tue 9h, Wed 7h45, Thu 8h, Fri 6h)', () => {
+  let last: number[] = []
+  render(<Harness onChange={(v) => { last = v }} />)
+  const set = (day: string, h: string, m: string) => {
+    fireEvent.change(screen.getByLabelText(`${day} hours`), { target: { value: h } })
+    fireEvent.change(screen.getByLabelText(`${day} minutes`), { target: { value: m } })
+  }
+  set('Monday', '8', '30'); set('Tuesday', '9', '0'); set('Wednesday', '7', '45'); set('Thursday', '8', '0'); set('Friday', '6', '0')
+  expect(last).toEqual([510, 540, 465, 480, 360, 0, 0])
+
+  set('Wednesday', '8', '0')   // editing Wednesday must not touch the others
+  expect(last).toEqual([510, 540, 480, 480, 360, 0, 0])
+})
