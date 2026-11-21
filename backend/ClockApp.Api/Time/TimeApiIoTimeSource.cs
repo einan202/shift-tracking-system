@@ -11,32 +11,14 @@ namespace ClockApp.Api.Time;
 public sealed class TimeApiIoTimeSource(HttpClient http) : IAttendanceTimeSource
 {
     public const string ProviderName = "timeapi.io";
-    private const int Attempts = 2;
-    // Seen live: timeapi.io can answer 502 for a moment. An instant retry would hit the same blip.
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(400);
 
     private sealed record Response(
         [property: JsonPropertyName("dateTime")] DateTime? DateTime,
         [property: JsonPropertyName("timeZone")] string? TimeZone,
         [property: JsonPropertyName("dstActive")] bool? DstActive);
 
-    public async Task<AttendanceTime> GetNowAsync(CancellationToken cancellationToken = default)
-    {
-        TimeSourceException? last = null;
-        for (var attempt = 1; attempt <= Attempts; attempt++)
-        {
-            try
-            {
-                return await FetchAsync(cancellationToken);
-            }
-            catch (TimeSourceException ex) when (attempt < Attempts)
-            {
-                last = ex; // retry once, after a short pause
-                await Task.Delay(RetryDelay, cancellationToken);
-            }
-        }
-        throw last!;
-    }
+    /// <summary>One attempt. Retries and provider fallback are decided by <see cref="ResilientTimeSource"/>.</summary>
+    public Task<AttendanceTime> GetNowAsync(CancellationToken cancellationToken = default) => FetchAsync(cancellationToken);
 
     private async Task<AttendanceTime> FetchAsync(CancellationToken ct)
     {

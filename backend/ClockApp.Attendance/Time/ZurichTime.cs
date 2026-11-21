@@ -42,6 +42,24 @@ public static class ZurichTime
     }
 
     /// <summary>
+    /// For providers that report the UTC instant directly: no ambiguity to resolve. TimeZoneInfo is used only
+    /// to CHECK the provider's DST flag and offset against the Europe/Zurich rules, never as a clock.
+    /// </summary>
+    /// <exception cref="TimeSourceException">The reported DST flag or offset contradicts the zone rules.</exception>
+    public static AttendanceTime FromUtc(DateTimeOffset utc, bool dstActive, TimeSpan reportedOffset, string provider)
+    {
+        utc = utc.ToUniversalTime();
+        var offset = Zone.GetUtcOffset(utc);
+        if (Zone.IsDaylightSavingTime(utc) != dstActive)
+            throw new TimeSourceException($"Time source reported dst={dstActive} for {utc:O}, which contradicts {ZoneId} rules.");
+        if (offset != reportedOffset)
+            throw new TimeSourceException($"Time source reported offset {reportedOffset} for {utc:O}, expected {offset} in {ZoneId}.");
+
+        var local = DateTime.SpecifyKind(utc.ToOffset(offset).DateTime, DateTimeKind.Unspecified);
+        return new AttendanceTime(utc, local, offset, dstActive, provider);
+    }
+
+    /// <summary>
     /// Converts an admin-typed Zurich wall-clock time to a UTC instant (for corrections, never for punches).
     /// Nonexistent times (spring-forward gap) are rejected; ambiguous times (fall-back hour) need the
     /// UTC offset in minutes (+60 or +120) to say which occurrence is meant.

@@ -96,12 +96,21 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownProxies.Clear();
 });
 
-// External Europe/Zurich time API: the only time source for Clock In/Out records.
-builder.Services.AddHttpClient<IAttendanceTimeSource, TimeApiIoTimeSource>(client =>
+// External Europe/Zurich time APIs: the only time source for Clock In/Out records. time.now is tried first
+// (measured fast and reliable), then timeapi.io; each with a short timeout and few attempts (see ResilientTimeSource).
+builder.Services.AddHttpClient<TimeNowTimeSource>((sp, client) =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["TimeApi:BaseUrl"] ?? "https://timeapi.io/");
+    client.BaseAddress = new Uri(sp.GetRequiredService<IConfiguration>()["TimeApi:TimeNowBaseUrl"] ?? "https://time.now/");
+    client.Timeout = TimeSpan.FromSeconds(2);
+});
+builder.Services.AddHttpClient<TimeApiIoTimeSource>((sp, client) =>
+{
+    client.BaseAddress = new Uri(sp.GetRequiredService<IConfiguration>()["TimeApi:BaseUrl"] ?? "https://timeapi.io/");
     client.Timeout = TimeSpan.FromSeconds(3);
 });
+builder.Services.AddScoped<IAttendanceTimeSource>(sp => new ResilientTimeSource(
+    [(sp.GetRequiredService<TimeNowTimeSource>(), 2), (sp.GetRequiredService<TimeApiIoTimeSource>(), 2)],
+    sp.GetRequiredService<ILogger<ResilientTimeSource>>()));
 
 var app = builder.Build();
 
