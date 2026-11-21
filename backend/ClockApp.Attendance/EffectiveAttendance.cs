@@ -17,7 +17,8 @@ public sealed record EffectiveRecord(
     bool IsAdjusted,
     bool IsOpen,
     DateTimeOffset? OriginalIn,
-    DateTimeOffset? OriginalOut)
+    DateTimeOffset? OriginalOut,
+    string? Provider = null)   // which time API recorded the punch (null for a manual entry)
 {
     public string Label => RecordId is { } r ? $"record #{r}" : $"manual entry #{AddCorrectionId}";
 }
@@ -47,12 +48,12 @@ public static class EffectiveAttendance
                 // "?? original" keeps a later genuine clock-out visible when the correction left the end open.
                 result.Add(new EffectiveRecord(r.Id, null,
                     c.CorrectedClockInUtc ?? r.ClockInUtc, c.CorrectedClockOutUtc ?? r.ClockOutUtc,
-                    c.WorkDate, false, true, r.IsOpen, r.ClockInUtc, r.ClockOutUtc));
+                    c.WorkDate, false, true, r.IsOpen, r.ClockInUtc, r.ClockOutUtc, r.TimeProvider));
             }
             else
             {
                 result.Add(new EffectiveRecord(r.Id, null, r.ClockInUtc, r.ClockOutUtc,
-                    r.WorkDate, false, false, r.IsOpen, r.ClockInUtc, r.ClockOutUtc));
+                    r.WorkDate, false, false, r.IsOpen, r.ClockInUtc, r.ClockOutUtc, r.TimeProvider));
             }
         }
         foreach (var add in corrections.Where(c => c.Kind == CorrectionKind.Add))

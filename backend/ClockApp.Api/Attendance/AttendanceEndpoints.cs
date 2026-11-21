@@ -15,10 +15,10 @@ public static class AttendanceEndpoints
         var group = app.MapGroup("/api/attendance").RequireAuthorization(Policies.Employee);
 
         group.MapPost("/clock-in", (ClaimsPrincipal user, AttendanceService svc, ILogger<AttendanceService> log, CancellationToken ct) =>
-            Guard(log, async () => ToResult(await svc.ClockInAsync(UserId(user), ct), conflict: "You are already clocked in.")));
+            Guard(log, async () => await ToResult(svc, UserId(user), await svc.ClockInAsync(UserId(user), ct), "You are already clocked in.", ct)));
 
         group.MapPost("/clock-out", (ClaimsPrincipal user, AttendanceService svc, ILogger<AttendanceService> log, CancellationToken ct) =>
-            Guard(log, async () => ToResult(await svc.ClockOutAsync(UserId(user), ct), conflict: "You are not clocked in.")));
+            Guard(log, async () => await ToResult(svc, UserId(user), await svc.ClockOutAsync(UserId(user), ct), "You are not clocked in.", ct)));
 
         // Source of truth for the UI after a failure, timeout or page reload. Does not call the time API.
         group.MapGet("/status", async (ClaimsPrincipal user, AttendanceService svc, CancellationToken ct) =>
@@ -30,18 +30,29 @@ public static class AttendanceEndpoints
 
     private static int UserId(ClaimsPrincipal p) => int.Parse(p.FindFirstValue(TokenService.SubjectClaim)!);
 
-    private static object Dto(AttendanceRecord r) => new
+    // Effective values (admin corrections applied). isAdjusted / isManual say when they differ from the punch.
+    private static object Dto(EffectiveRecord r) => new
     {
-        id = r.Id,
-        clockInUtc = r.ClockInUtc,
-        clockOutUtc = r.ClockOutUtc,
+        id = r.RecordId,
+        clockInUtc = r.In,
+        clockOutUtc = r.Out,
         workDate = r.WorkDate,
-        provider = r.TimeProvider,
+        provider = r.Provider ?? "manual",
+        isAdjusted = r.IsAdjusted,
+        isManual = r.IsManual,
     };
 
-    private static IResult ToResult(ClockResult result, string conflict) => result.Outcome switch
+    private static async Task<IResult> ToResult(AttendanceService svc, int userId, ClockResult result, string conflict, CancellationToken ct)
     {
-        ClockOutcome.Recorded => Results.Ok(new { clockedIn = result.Record!.IsOpen, record = Dto(result.Record) }),
+        if (result.Outcome != ClockOutcome.Recorded) return ConflictResult(result, conflict);
+
+        // Report the punch that was just recorded, with any correction already applied.
+        var recorded = await svc.GetEffectiveAsync(userId, result.Record!.Id, ct);
+        return Results.Ok(new { clockedIn = recorded!.IsOpen, record = Dto(recorded) });
+    }
+
+    private static IResult ConflictResult(ClockResult result, string conflict) => result.Outcome switch
+    {
         ClockOutcome.ConflictsWithCorrection => Results.Json(
             new { error = $"Your clock-in was corrected to {ZurichTime.ToLocal(result.CorrectedClockIn!.Value):yyyy-MM-dd HH:mm} (Zurich time), which is later than this clock-out. Nothing was recorded; try again in a moment or ask an administrator." },
             statusCode: StatusCodes.Status409Conflict),

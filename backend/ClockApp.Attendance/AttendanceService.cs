@@ -121,14 +121,18 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
         return new ClockResult(ClockOutcome.NotClockedIn, null);
     }
 
-    /// <summary>The source of truth the UI re-reads after any failure/reload: open record, or the latest one.</summary>
-    public async Task<AttendanceRecord?> GetCurrentOrLastAsync(int userId, CancellationToken ct = default)
-    {
-        return await db.AttendanceRecords.AsNoTracking()
-            .Where(r => r.UserId == userId)
-            .OrderByDescending(r => r.IsOpen).ThenByDescending(r => r.ClockInUtc)
-            .FirstOrDefaultAsync(ct);
-    }
+    /// <summary>
+    /// The source of truth the UI re-reads after any failure/reload: the open record, or else the latest one,
+    /// as EFFECTIVE values (admin corrections applied), never the original punch alone.
+    /// </summary>
+    public async Task<EffectiveRecord?> GetCurrentOrLastAsync(int userId, CancellationToken ct = default) =>
+        (await EffectiveAttendance.LoadAsync(db, userId, ct: ct))
+            .OrderByDescending(e => e.IsOpen).ThenByDescending(e => e.In)
+            .FirstOrDefault();
+
+    /// <summary>One punch as effective values (used for the response to the punch that was just recorded).</summary>
+    public async Task<EffectiveRecord?> GetEffectiveAsync(int userId, long recordId, CancellationToken ct = default) =>
+        (await EffectiveAttendance.LoadAsync(db, userId, ct: ct)).FirstOrDefault(e => e.RecordId == recordId);
 
     // SQL Server error numbers for unique index / constraint violations.
     private static bool IsUniqueViolation(DbUpdateException ex) =>
