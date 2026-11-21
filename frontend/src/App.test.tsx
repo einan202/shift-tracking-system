@@ -1,17 +1,30 @@
 import { render, screen } from '@testing-library/react'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 
-afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => sessionStorage.clear())
+afterEach(() => { vi.unstubAllGlobals(); window.history.pushState({}, '', '/') })
 
-it('shows backend status ok when /api/health succeeds', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+it('shows the sign-in form when logged out', () => {
   render(<App />)
-  expect(await screen.findByText('Backend status: ok')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy()
 })
 
-it('shows backend status error when /api/health fails', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')))
+it('opens the password form from an invite link', () => {
+  window.history.pushState({}, '', '/set-password?token=abc')
   render(<App />)
-  expect(await screen.findByText('Backend status: error')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Choose your password' })).toBeTruthy()
+})
+
+it('shows the employee screen for an employee session', async () => {
+  sessionStorage.setItem('clockapp.token', 't')
+  sessionStorage.setItem('clockapp.user', JSON.stringify({ role: 'Employee', fullName: 'Eve Employee' }))
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => ({
+    ok: true, status: 200,
+    json: async () => (url.includes('/status') ? { clockedIn: false, record: null }
+      : { year: 2026, month: 2, defaultShiftMinutes: 480, days: [], totals: { workedMinutes: 0, expectedMinutes: 0, differenceMinutes: 0, daysWorked: 0 } }),
+  })))
+  render(<App />)
+  expect(await screen.findByRole('button', { name: 'Clock in' })).toBeTruthy()
+  expect(screen.getByText('Eve Employee')).toBeTruthy()
 })

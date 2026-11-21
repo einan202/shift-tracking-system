@@ -1,20 +1,34 @@
-import { useEffect, useState } from 'react'
+import { AuthProvider, useAuth } from './auth'
+import Admin from './pages/Admin'
+import Employee from './pages/Employee'
+import Login from './pages/Login'
+import SetPassword from './pages/SetPassword'
 
-type Status = 'loading' | 'ok' | 'error'
+function Shell() {
+  const { user, logout } = useAuth()
 
-export default function App() {
-  const [status, setStatus] = useState<Status>('loading')
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((r) => setStatus(r.ok ? 'ok' : 'error'))
-      .catch(() => setStatus('error'))
-  }, [])
+  // Invite / reset links open /set-password?token=...; no sign-in needed.
+  if (window.location.pathname === '/set-password') {
+    return <SetPassword token={new URLSearchParams(window.location.search).get('token') ?? ''} />
+  }
+  if (!user) return <Login />
 
   return (
-    <main>
-      <h1>Shift tracking</h1>
-      <p>Backend status: {status}</p>
-    </main>
+    <>
+      <header className="topbar">
+        <strong className="brand">Shift tracking</strong>
+        <span className="topbar__user">{user.fullName} <span className="tag">{user.role}</span></span>
+        <button className="btn btn--small" onClick={logout}>Sign out</button>
+      </header>
+      <main className="page">{user.role === 'Admin' ? <Admin /> : <Employee />}</main>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Shell />
+    </AuthProvider>
   )
 }
