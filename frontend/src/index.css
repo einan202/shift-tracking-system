@@ -163,22 +163,49 @@ tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 
 label .muted { font-weight: 400; }
 
-/* Admin attendance: compact toolbar, date once per day, phone folding */
-.att-toolbar { gap: .5rem .75rem; }
-.att-toolbar__employee select { min-width: 0; max-width: 14rem; }
-.att-stepper { display: flex; align-items: center; justify-content: center; gap: .5rem; }
-.att-toolbar__month { min-width: 8.5rem; text-align: center; white-space: nowrap; line-height: 2.25rem; }
+/* Admin attendance: filter bar, joined month stepper, day-grouped records */
+.att__summary { margin: 0; font-size: .9rem; }
+.att__count--manual { color: #b45309; font-weight: 600; }
+.att__count--warn { color: #9a3412; font-weight: 600; }
+.att-bar { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; padding: .75rem; margin-bottom: 1rem; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.att-bar__employee { flex: 1 1 14rem; max-width: 20rem; }
+.att-bar__employee select { width: 100%; }
+.att-bar__add { margin-left: auto; }
+.att-stepper { display: flex; align-items: stretch; border: 1px solid #98a4b1; border-radius: var(--radius); background: #fff; overflow: hidden; }
+.att-stepper__btn { font: inherit; font-size: 1.25rem; line-height: 1; width: 2.5rem; min-height: 2.5rem; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+.att-stepper__btn:hover { background: var(--paper); }
+.att-stepper__month { display: grid; place-items: center; min-width: 9.5rem; padding: 0 .75rem; white-space: nowrap; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.att__empty { padding: 1.5rem 0; text-align: center; }
+
+.att-admin th, .att-admin td { border-bottom: 1px solid var(--line); }
+.att-admin thead th { padding-top: .25rem; padding-bottom: .4rem; }
 .att-admin td.num { white-space: nowrap; }
-.att-admin__day { white-space: nowrap; font-weight: 600; }
+.att-day th { background: var(--paper); color: var(--ink); font-size: .9rem; font-weight: 700; padding: .35rem .6rem; border-top: 1px solid var(--line); }
+.att-day__count { margin-left: .6rem; font-weight: 400; color: var(--steel); }
+.att-rec td { padding-top: .6rem; padding-bottom: .6rem; vertical-align: middle; }
+.att-rec__main { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .4rem; }
+.att-rec__main .tag { margin-left: 0; }
+.att-rec__time { font-size: 1.05rem; font-weight: 600; }
 .att-admin details { white-space: normal; }
-.punched-sub { display: none; font-size: .85rem; margin-top: .15rem; }
+.att-hist td { padding-top: 0; padding-bottom: .6rem; }
+.att-rec:has(+ .att-hist) td { border-bottom: 0; padding-bottom: .15rem; }
+.att-history summary { cursor: pointer; font-size: .85rem; color: var(--steel); width: fit-content; }
+.att-history .history { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .75rem .5rem 1.75rem; }
+.punched-sub { display: none; font-size: .85rem; margin-top: .1rem; }
+
 @media (max-width: 720px) {
-  .att-admin .col-punched { display: none; }
+  .panel.att { padding: .75rem; }
+  .att-bar { padding: .6rem; gap: .6rem; }
+  .att-bar__employee { flex: 1 1 100%; max-width: none; }
+  .att-bar__employee select, .att-bar__add, .att-stepper__btn { min-height: 2.75rem; }
+  .att-stepper { flex: 1 1 100%; }
+  .att-stepper__btn { width: 3.25rem; }
+  .att-stepper__month { flex: 1; min-width: 0; }
+  .att-bar__add { flex: 1 1 100%; margin-left: 0; }
+  .att-admin .col-punched, .att-admin thead { display: none; }
+  .att-hist td { padding-left: .4rem; padding-right: .4rem; }
   .punched-sub { display: block; }
-  .att-toolbar { align-items: stretch; width: 100%; }
-  .att-toolbar__employee { flex: 1 1 100%; }
-  .att-stepper { flex: 1 1 auto; }
-  .att-toolbar__employee select { max-width: none; width: 100%; }
-  .att-admin__day { white-space: normal; width: 4.5rem; }
   .att-admin th, .att-admin td { padding-left: .4rem; padding-right: .4rem; }
+  .att-rec td.r { width: 5.5rem; }
+  .att-rec .btn--small { min-height: 2.75rem; width: 100%; }
 }

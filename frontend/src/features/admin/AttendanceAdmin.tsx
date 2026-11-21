@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { api } from '../../api'
 import { formatDay, formatRange, formatStamp, formatTime } from '../../format'
 import CorrectionDialog, { type CorrectionTarget } from './CorrectionDialog'
@@ -60,78 +60,112 @@ export default function AttendanceAdmin() {
     setYm({ year: Math.floor(idx / 12), month: (idx % 12) + 1 })
   }
 
+  // Records arrive in date order; group them under one header per day.
+  const days = (view?.records ?? []).reduce<{ date: string; rows: Row[] }[]>((acc, r) => {
+    const last = acc[acc.length - 1]
+    if (last && last.date === r.effective.workDate) last.rows.push(r)
+    else acc.push({ date: r.effective.workDate, rows: [r] })
+    return acc
+  }, [])
+  const corrected = (view?.records ?? []).filter((r) => r.isAdjusted && !r.isVoided).length
+  const added = (view?.records ?? []).filter((r) => r.source === 'manual' && !r.isVoided).length
+  const deleted = (view?.records ?? []).filter((r) => r.isVoided).length
+
   return (
-    <section className="panel">
+    <section className="panel att">
       <header className="panel__head">
         <h2>Attendance</h2>
-        <div className="row row--wrap att-toolbar">
-          <label className="inline att-toolbar__employee">Employee
-            <select value={userId ?? ''} onChange={(e) => { setUserId(Number(e.target.value)); setYm(null) }}>
-              {employees.map((e) => <option key={e.id} value={e.id}>{e.fullName}</option>)}
-            </select>
-          </label>
-          {shown && (
-            <div className="att-stepper">
-              <button className="btn btn--small" onClick={() => step(-1)} aria-label="Previous month">‹</button>
-              <strong className="att-toolbar__month" aria-live="polite">{monthName(shown.year, shown.month)}</strong>
-              <button className="btn btn--small" onClick={() => step(1)} aria-label="Next month">›</button>
-            </div>
-          )}
-          {userId !== null && <button className="btn" onClick={() => void openDialog({ kind: 'Add', userId })}>Add missing record</button>}
-        </div>
+        {view && view.records.length > 0 && (
+          <p className="att__summary muted">
+            {days.length} {days.length === 1 ? 'day' : 'days'}, {view.records.length} {view.records.length === 1 ? 'record' : 'records'}
+            {corrected > 0 && <>, <span className="att__count att__count--manual">{corrected} corrected</span></>}
+            {added > 0 && <>, <span className="att__count att__count--manual">{added} added</span></>}
+            {deleted > 0 && <>, <span className="att__count att__count--warn">{deleted} deleted</span></>}
+          </p>
+        )}
       </header>
 
+      <div className="att-bar">
+        <label className="att-bar__employee">Employee
+          <select value={userId ?? ''} onChange={(e) => { setUserId(Number(e.target.value)); setYm(null) }}>
+            {employees.map((e) => <option key={e.id} value={e.id}>{e.fullName}</option>)}
+          </select>
+        </label>
+        {shown && (
+          <div className="att-stepper" role="group" aria-label="Month">
+            <button className="att-stepper__btn" onClick={() => step(-1)} aria-label="Previous month">‹</button>
+            <strong className="att-stepper__month" aria-live="polite">{monthName(shown.year, shown.month)}</strong>
+            <button className="att-stepper__btn" onClick={() => step(1)} aria-label="Next month">›</button>
+          </div>
+        )}
+        {userId !== null && <button className="btn btn--primary att-bar__add" onClick={() => void openDialog({ kind: 'Add', userId })}>Add missing record</button>}
+      </div>
+
       {error && <p role="alert" className="notice notice--error">Could not load attendance.</p>}
-      {view && view.records.length === 0 && <p className="muted">No records in this month.</p>}
+      {view && view.records.length === 0 && <p className="att__empty muted">No records in this month.</p>}
       {view && view.records.length > 0 && (
         <div className="table-wrap">
           <table className="att-admin">
-            <thead><tr><th>Day</th><th className="col-punched">Punched (API time)</th><th>Counted as</th><th><span className="sr-only">Actions</span></th></tr></thead>
-            <tbody>
-              {view.records.map((r, i) => {
-                const sameDay = i > 0 && view.records[i - 1].effective.workDate === r.effective.workDate // date shown once per day
-                const punched = r.original
-                  ? `${formatTime(r.original.clockInUtc)} – ${r.original.clockOutUtc ? formatTime(r.original.clockOutUtc) : 'open'}`
-                  : null
-                return (
-                <tr key={r.recordId ?? `m${r.history[0]?.id}`} className={sameDay ? 'att-admin__more' : undefined}>
-                  <td className="att-admin__day">{sameDay ? <span className="sr-only">{formatDay(r.effective.workDate)}</span> : formatDay(r.effective.workDate)}</td>
-                  <td className="num col-punched">
-                    {punched ?? <span className="muted">manual entry</span>}
-                  </td>
-                  <td className={`num ${r.isVoided ? 'voided' : ''}`}>
-                    {r.isVoided && <span className="tag tag--warn">deleted</span>}
-                    {formatTime(r.effective.clockInUtc)} – {r.effective.clockOutUtc ? formatTime(r.effective.clockOutUtc) : <em>missing clock-out</em>}
-                    {r.source === 'manual' && <span className="tag">added</span>}
-                    {r.isAdjusted && !r.isVoided && <span className="tag">corrected</span>}
-                    <span className="punched-sub muted">{punched ? `Punched ${punched}` : 'Manual entry'}</span>
-                    {r.history.length > 0 && (
-                      <details>
-                        <summary>History ({r.history.length})</summary>
-                        <ul className="history">
-                          {r.history.map((h) => (
-                            <li key={h.id}>
-                              <strong>{h.kind}</strong> by {h.createdBy ?? 'admin'} on {formatStamp(h.createdAtUtc)}: “{h.reason}”
-                              <br />
-                              {h.kind === 'Adjust' && <><span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span><br /></>}
-                              <span className="muted">{h.kind === 'Void' ? `shift ${formatRange(h.previousClockInUtc, h.previousClockOutUtc)} deleted` : `now ${formatRange(h.correctedClockInUtc, h.correctedClockOutUtc)}`}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                  </td>
-                  <td className="r">
-                    {r.recordId !== null && userId !== null && (
-                      <button className="btn btn--small" onClick={() => void openDialog({
-                        kind: 'Adjust', userId, recordId: r.recordId!, clockInUtc: r.effective.clockInUtc, clockOutUtc: r.effective.clockOutUtc,
-                      })}>Correct</button>
-                    )}
-                  </td>
+            <thead><tr><th>Counted as</th><th className="col-punched">Punched (API time)</th><th><span className="sr-only">Actions</span></th></tr></thead>
+            {days.map((d) => (
+              <tbody key={d.date}>
+                <tr className="att-day">
+                  <th colSpan={3} scope="colgroup">
+                    {formatDay(d.date)}
+                    {d.rows.length > 1 && <span className="att-day__count">{d.rows.length} records</span>}
+                  </th>
                 </tr>
-                )
-              })}
-            </tbody>
+                {d.rows.map((r) => {
+                  const punched = r.original
+                    ? `${formatTime(r.original.clockInUtc)} – ${r.original.clockOutUtc ? formatTime(r.original.clockOutUtc) : 'open'}`
+                    : null
+                  return (
+                    <Fragment key={r.recordId ?? `m${r.history[0]?.id}`}>
+                    <tr className="att-rec">
+                      <td className="num">
+                        <div className="att-rec__main">
+                          <span className={`att-rec__time ${r.isVoided ? 'voided' : ''}`}>
+                            {formatTime(r.effective.clockInUtc)} – {r.effective.clockOutUtc ? formatTime(r.effective.clockOutUtc) : <em>missing clock-out</em>}
+                          </span>
+                          {r.isVoided && <span className="tag tag--warn">deleted</span>}
+                          {r.source === 'manual' && !r.isVoided && <span className="tag tag--manual">added</span>}
+                          {r.isAdjusted && !r.isVoided && <span className="tag tag--manual">corrected</span>}
+                        </div>
+                        <span className="punched-sub muted">{punched ? `Punched ${punched}` : 'Manual entry'}</span>
+                      </td>
+                      <td className="num col-punched">{punched ?? <span className="muted">manual entry</span>}</td>
+                      <td className="r">
+                        {r.recordId !== null && userId !== null && (
+                          <button className="btn btn--small" onClick={() => void openDialog({
+                            kind: 'Adjust', userId, recordId: r.recordId!, clockInUtc: r.effective.clockInUtc, clockOutUtc: r.effective.clockOutUtc,
+                          })}>Correct</button>
+                        )}
+                      </td>
+                    </tr>
+                      {r.history.length > 0 && (
+                        <tr className="att-hist">
+                          <td colSpan={3}>
+                          <details className="att-history">
+                            <summary>History ({r.history.length})</summary>
+                            <ul className="history">
+                              {r.history.map((h) => (
+                                <li key={h.id}>
+                                  <strong>{h.kind}</strong> by {h.createdBy ?? 'admin'} on {formatStamp(h.createdAtUtc)}: “{h.reason}”
+                                  <br />
+                                  {h.kind === 'Adjust' && <><span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span><br /></>}
+                                  <span className="muted">{h.kind === 'Void' ? `shift ${formatRange(h.previousClockInUtc, h.previousClockOutUtc)} deleted` : `now ${formatRange(h.correctedClockInUtc, h.correctedClockOutUtc)}`}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            ))}
           </table>
         </div>
       )}
