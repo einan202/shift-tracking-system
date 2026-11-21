@@ -209,3 +209,57 @@ label .muted { font-weight: 400; }
   .att-rec td.r { width: 5.5rem; }
   .att-rec .btn--small { min-height: 2.75rem; width: 100%; }
 }
+
+/* Employee timesheet and clock: same bar/stepper language as Admin Attendance */
+.summary { display: grid; grid-template-columns: 3fr 1fr; gap: .75rem; margin: 0 0 1rem; }
+.summary__block { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: .6rem .9rem; }
+.summary h3 { margin: 0 0 .35rem; }
+.summary dl { gap: 1.5rem; }
+.summary dd { font-size: 1.25rem; }
+.timesheet thead th { padding-top: .25rem; padding-bottom: .4rem; }
+.timesheet td { padding-top: .45rem; padding-bottom: .45rem; vertical-align: middle; }
+.timesheet .ts-worked { font-weight: 600; }
+.timesheet .row--off td { color: #8b97a4; padding-top: .3rem; padding-bottom: .3rem; }
+.timesheet .row--today td:first-child { box-shadow: inset 3px 0 0 var(--signal); }
+.timesheet .ts-actions { text-align: right; }
+.timesheet td .tag { margin-left: .4rem; }
+
+.punch__state { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .4rem; min-height: 0; padding: .6rem .8rem; background: var(--paper); border: 1px solid var(--line); border-left: 4px solid #98a4b1; border-radius: var(--radius); }
+.punch--on .punch__state { border-left-color: var(--signal); }
+.punch .panel__head { margin-bottom: 0; }
+
+@media (max-width: 720px) {
+  .summary { grid-template-columns: 1fr; gap: .5rem; }
+  .summary__block { padding: .5rem .75rem; }
+  .summary dd { font-size: 1.15rem; }
+  .summary__block:last-child { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .summary__block:last-child h3 { margin: 0; }
+  .summary__block:last-child dl div { display: flex; align-items: baseline; gap: .5rem; }
+  .summary dl { gap: 0; justify-content: space-between; }
+  .panel[aria-label='Timesheet'] { padding: .75rem; }
+  .panel[aria-label='Timesheet'] .att-stepper { flex: 1 1 100%; }
+  .panel[aria-label='Timesheet'] .att-stepper__btn { width: 3.25rem; min-height: 2.75rem; }
+  .panel[aria-label='Timesheet'] .att-stepper__month { flex: 1; min-width: 0; }
+  .timesheet thead { display: none; }
+  .timesheet, .timesheet tbody { display: block; }
+  .timesheet tr { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-areas: 'date day bal' 'in out worked' 'exp act act'; column-gap: .5rem; padding: .5rem .25rem; border-bottom: 1px solid var(--line); }
+  .timesheet td { display: block; padding: .1rem 0; border: 0; white-space: normal; text-align: left; }
+  .timesheet td:empty { display: none; }
+  .timesheet td[data-label]::before { content: attr(data-label); display: block; font-size: .75rem; font-weight: 400; color: var(--steel); }
+  .timesheet td .tag { display: block; width: fit-content; margin: .15rem 0 0; }
+  .timesheet .ts-date { grid-area: date; font-weight: 700; }
+  .timesheet .ts-day { grid-area: day; color: var(--steel); }
+  .timesheet .ts-balance { grid-area: bal; text-align: right; font-size: 1.05rem; }
+  .timesheet td:nth-child(3) { grid-area: in; }
+  .timesheet td:nth-child(4) { grid-area: out; }
+  .timesheet .ts-worked { grid-area: worked; text-align: left; }
+  .timesheet .ts-expected { grid-area: exp; text-align: left; }
+  .timesheet .ts-actions { grid-area: act; display: flex; justify-content: flex-end; gap: .4rem; }
+  .timesheet .ts-actions:empty { display: none; }
+  .timesheet td .btn + .btn { margin-left: 0; }
+  .timesheet .ts-actions .btn { min-height: 2.75rem; padding: .25rem .9rem; }
+  .timesheet .row--off { padding: .35rem .25rem; }
+  .timesheet .row--today { background: #f4f8fc; box-shadow: inset 3px 0 0 var(--signal); }
+  .timesheet .row--today td { background: transparent; }
+  .timesheet .row--today td:first-child { box-shadow: none; }
+}

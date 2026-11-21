@@ -55,10 +55,11 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
   return (
     <section className="panel" aria-label="Timesheet">
       <header className="panel__head">
-        <h2>{monthName(sheet.year, sheet.month)}</h2>
-        <div className="row">
-          <button className="btn btn--small" onClick={() => step(-1)} aria-label="Previous month">‹</button>
-          <button className="btn btn--small" onClick={() => step(1)} aria-label="Next month">›</button>
+        <h2>Timesheet</h2>
+        <div className="att-stepper" role="group" aria-label="Month">
+          <button className="att-stepper__btn" onClick={() => step(-1)} aria-label="Previous month">‹</button>
+          <strong className="att-stepper__month" aria-live="polite">{monthName(sheet.year, sheet.month)}</strong>
+          <button className="att-stepper__btn" onClick={() => step(1)} aria-label="Next month">›</button>
         </div>
       </header>
 
@@ -84,23 +85,23 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
           </thead>
           <tbody>
             {sheet.days.map((d) => (
-              <tr key={d.date} className={`${d.isFuture ? 'row--future' : ''} ${d.isToday ? 'row--today' : ''}`} data-date={d.date}>
-                <td className="num">{formatDate(d.date)}</td>
-                <td>{d.weekday.slice(0, 3)}</td>
-                <td className={`num ${d.clockInIsManual ? 'manual' : ''}`}>
+              <tr key={d.date} className={`${d.isFuture ? 'row--future' : ''} ${d.isToday ? 'row--today' : ''} ${d.expectedMinutes === 0 && !d.clockInUtc ? 'row--off' : ''}`} data-date={d.date}>
+                <td className="num ts-date">{formatDate(d.date)}</td>
+                <td className="ts-day">{d.weekday.slice(0, 3)}</td>
+                <td data-label="Clock-in" className={`num ${d.clockInIsManual ? 'manual' : ''}`}>
                   {d.clockInUtc ? formatTime(d.clockInUtc) : ''}
                   {d.clockInIsManual && <span className="tag tag--manual">Manual</span>}
                 </td>
-                <td className={`num ${d.clockOutIsManual ? 'manual' : ''}`}>
+                <td data-label="Clock-out" className={`num ${d.clockOutIsManual ? 'manual' : ''}`}>
                   {d.clockOutUtc ? formatTime(d.clockOutUtc) : ''}
                   {d.clockOutIsManual && <span className="tag tag--manual">Manual</span>}
                   {d.inProgress && <span className="tag">in progress</span>}
                   {d.needsCorrection && <span className="tag tag--warn">needs correction</span>}
                 </td>
-                <td className="r num">{d.workedMinutes != null ? formatHours(d.workedMinutes) : ''}</td>
-                <td className="r num">{d.expectedMinutes > 0 ? formatHours(d.expectedMinutes) : ''}</td>
-                <td className={`r num ${d.balanceMinutes != null ? balanceClass(d.balanceMinutes) : ''}`}>{d.balanceMinutes != null ? formatBalance(d.balanceMinutes) : ''}</td>
-                <td>{!d.isFuture && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}{!d.isFuture && d.clockInUtc && !d.inProgress && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setDeleting(d)}>Delete<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
+                <td data-label="Worked" className="r num ts-worked">{d.workedMinutes != null ? formatHours(d.workedMinutes) : ''}</td>
+                <td data-label="Expected" className="r num ts-expected">{d.expectedMinutes > 0 ? formatHours(d.expectedMinutes) : ''}</td>
+                <td className={`r num ts-balance ${d.balanceMinutes != null ? balanceClass(d.balanceMinutes) : ''}`}>{d.balanceMinutes != null ? formatBalance(d.balanceMinutes) : ''}</td>
+                <td className="ts-actions">{!d.isFuture && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}{!d.isFuture && d.clockInUtc && !d.inProgress && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setDeleting(d)}>Delete<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
               </tr>
             ))}
           </tbody>

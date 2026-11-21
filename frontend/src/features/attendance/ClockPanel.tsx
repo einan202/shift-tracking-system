@@ -48,7 +48,8 @@ export default function ClockPanel({ client = realClockApi, onChange }: { client
 
   const clockedIn = status?.clockedIn ?? false
   return (
-    <section className="panel punch" aria-label="Clock">
+    <section className={`panel punch ${clockedIn ? 'punch--on' : ''}`} aria-label="Clock">
+      <header className="panel__head"><h2>Clock</h2></header>
       <p className="punch__state">
         {clockedIn && status?.record ? (
           <>On shift since <strong className="num">{formatTime(status.record.clockInUtc)}</strong> <span className="muted">Zurich time</span></>
