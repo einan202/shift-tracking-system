@@ -229,6 +229,27 @@ namespace ClockApp.Attendance.Migrations
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("int");
 
+                    b.Property<short>("ExpectedMinutesFri")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesMon")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesSat")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesSun")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesThu")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesTue")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("ExpectedMinutesWed")
+                        .HasColumnType("smallint");
+
                     b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
@@ -241,13 +262,22 @@ namespace ClockApp.Attendance.Migrations
                             t.HasCheckConstraint("CK_ShiftSettings_Duration", "[DurationMinutes] BETWEEN 1 AND 1440");
 
                             t.HasCheckConstraint("CK_ShiftSettings_Singleton", "[Id] = 1");
+
+                            t.HasCheckConstraint("CK_ShiftSettings_Week", "[ExpectedMinutesMon] BETWEEN 0 AND 1440 AND [ExpectedMinutesTue] BETWEEN 0 AND 1440 AND [ExpectedMinutesWed] BETWEEN 0 AND 1440 AND [ExpectedMinutesThu] BETWEEN 0 AND 1440 AND [ExpectedMinutesFri] BETWEEN 0 AND 1440 AND [ExpectedMinutesSat] BETWEEN 0 AND 1440 AND [ExpectedMinutesSun] BETWEEN 0 AND 1440 AND ([ExpectedMinutesMon] + [ExpectedMinutesTue] + [ExpectedMinutesWed] + [ExpectedMinutesThu] + [ExpectedMinutesFri] + [ExpectedMinutesSat] + [ExpectedMinutesSun]) > 0");
                         });
 
                     b.HasData(
                         new
                         {
                             Id = 1,
-                            DurationMinutes = 480
+                            DurationMinutes = 480,
+                            ExpectedMinutesFri = (short)480,
+                            ExpectedMinutesMon = (short)480,
+                            ExpectedMinutesSat = (short)0,
+                            ExpectedMinutesSun = (short)0,
+                            ExpectedMinutesThu = (short)480,
+                            ExpectedMinutesTue = (short)480,
+                            ExpectedMinutesWed = (short)480
                         });
                 });
 

@@ -53,10 +53,17 @@ public class AttendanceDbContext(DbContextOptions<AttendanceDbContext> options) 
             {
                 t.HasCheckConstraint("CK_ShiftSettings_Singleton", "[Id] = 1");
                 t.HasCheckConstraint("CK_ShiftSettings_Duration", "[DurationMinutes] BETWEEN 1 AND 1440");
+                t.HasCheckConstraint("CK_ShiftSettings_Week", "[ExpectedMinutesMon] BETWEEN 0 AND 1440 AND [ExpectedMinutesTue] BETWEEN 0 AND 1440 AND [ExpectedMinutesWed] BETWEEN 0 AND 1440 AND [ExpectedMinutesThu] BETWEEN 0 AND 1440 AND [ExpectedMinutesFri] BETWEEN 0 AND 1440 AND [ExpectedMinutesSat] BETWEEN 0 AND 1440 AND [ExpectedMinutesSun] BETWEEN 0 AND 1440 AND ([ExpectedMinutesMon] + [ExpectedMinutesTue] + [ExpectedMinutesWed] + [ExpectedMinutesThu] + [ExpectedMinutesFri] + [ExpectedMinutesSat] + [ExpectedMinutesSun]) > 0");
             });
             e.Property(x => x.Id).ValueGeneratedNever();
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UpdatedByUserId).OnDelete(DeleteBehavior.Restrict);
-            e.HasData(new Entities.ShiftSettings { Id = Entities.ShiftSettings.SingletonId, DurationMinutes = DefaultShiftMinutes });
+            e.Ignore(x => x.Week);
+            e.HasData(new Entities.ShiftSettings
+            {
+                Id = Entities.ShiftSettings.SingletonId, DurationMinutes = DefaultShiftMinutes,
+                ExpectedMinutesMon = DefaultShiftMinutes, ExpectedMinutesTue = DefaultShiftMinutes, ExpectedMinutesWed = DefaultShiftMinutes,
+                ExpectedMinutesThu = DefaultShiftMinutes, ExpectedMinutesFri = DefaultShiftMinutes,
+            });
         });
 
         b.Entity<AttendanceRecord>(e =>
