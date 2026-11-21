@@ -6,7 +6,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
     ports:
-      - "1434:1433"   # 1433 is commonly used by other local SQL Server containers
+      - "127.0.0.1:1434:1433"   # localhost only; 1433 is commonly used by other local SQL Server containers
     volumes:
       - sqldata:/var/opt/mssql
     healthcheck:
