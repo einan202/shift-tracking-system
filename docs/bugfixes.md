@@ -52,10 +52,14 @@ The dialog's `datetime-local` inputs for a new record had no value and no limit,
 
 ### Solution
 - `GET /api/admin/attendance` now returns `zurichNow` (server time converted to Europe/Zurich, `yyyy-MM-ddTHH:mm`; used only for UI defaults, nothing is recorded).
-- The dialog defaults to a normal working day on the Zurich date (08:00 to 17:00, never later than Zurich now), caps both inputs with `max = zurichNow`, and shows "It is now <date> <time> in Zurich". The browser's time zone is no longer used.
-- Server-side validation is unchanged.
+- The dialog defaults to a normal working day on the Zurich date (08:00 to 17:00, never later than Zurich now) and shows "It is now <date> <time> in Zurich". The browser's time zone is no longer used.
+- The Zurich "now" is re-fetched every time the dialog is opened (not just when the page loaded).
+- Server-side validation is unchanged, but the "future" error now says what was compared, e.g. *"Clock-out 2026-11-21 16:00 is in the future. The current Zurich time is 2026-11-21 14:09; enter a time at or before it."* (was: "Clock-out cannot be in the future."), so the admin does not have to guess the current Zurich time.
+
+**Follow-up (the problem still occurred after the first fix).** The first version also set `max = zurichNow` on both inputs, using the time from when the Attendance page loaded. After the page had been open for a while that cap was stale: in Chrome, 90 s after load, the default said 13:57 while Zurich was 13:59, and saving 13:59 was blocked in the browser with "Value must be 21/11/2026, 13:57 or earlier", although 13:59 was valid. Fix: removed the browser-side `max` (the server already rejects genuinely future times) and reload the Zurich "now" on every dialog open.
 
 ### Verification
 - Unit tests: `ZurichTime.ToLocal` (including 22:30 UTC becoming 00:30 the next day), the `zurichNow` field on the endpoint, and the default-times helper (late evening, afternoon, early morning, just after midnight).
 - Live, in Chrome with the machine in Israel time (14:54 Israel, 13:54 Zurich): the dialog opened with 08:00 and 13:54 and the note "It is now 2026-11-21 13:54 in Zurich". Saving those defaults produced only an "overlaps record" message for existing records, with no "future" error.
-
+- Follow-up, live in Chrome: reproduced the stale cap (above), then after the fix left the page idle for about 70 s, opened the dialog (default 14:01, matching real Zurich time 14:01) and submitted 14:01 as clock-out: no browser block, only the server's "times overlap" message for an existing record (used on purpose so nothing is saved).
+- Unit tests: dialog defaults come from the Zurich time it is given, and the inputs have no `max` (regression test).
