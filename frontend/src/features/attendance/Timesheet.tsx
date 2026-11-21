@@ -9,7 +9,7 @@ export type SheetDay = {
   workedMinutes: number | null; expectedMinutes: number; balanceMinutes: number | null; isToday: boolean; isFuture: boolean
 }
 export type Sheet = {
-  year: number; month: number; zurichToday: string; days: SheetDay[]
+  year: number; month: number; zurichToday: string; employmentStartDate: string | null; days: SheetDay[]
   monthToDate: { workedMinutes: number; expectedMinutes: number; balanceMinutes: number }
   wholeMonth: { expectedMinutes: number }
 }
@@ -98,7 +98,7 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
                 <td className="r num">{d.workedMinutes != null ? formatHours(d.workedMinutes) : ''}</td>
                 <td className="r num">{d.expectedMinutes > 0 ? formatHours(d.expectedMinutes) : ''}</td>
                 <td className={`r num ${d.balanceMinutes != null ? balanceClass(d.balanceMinutes) : ''}`}>{d.balanceMinutes != null ? formatBalance(d.balanceMinutes) : ''}</td>
-                <td>{!d.isFuture && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
+                <td>{!d.isFuture && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
               </tr>
             ))}
           </tbody>

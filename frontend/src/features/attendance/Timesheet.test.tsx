@@ -10,7 +10,7 @@ const day = (date: string, weekday: string, o: Partial<Sheet['days'][number]> = 
 })
 
 const sheet: Sheet = {
-  year: 2026, month: 6, zurichToday: '2026-06-10',
+  year: 2026, month: 6, zurichToday: '2026-06-10', employmentStartDate: '2026-06-01',
   days: [
     day('2026-06-01', 'Monday', { clockInUtc: '2026-06-01T06:00:00Z', clockOutUtc: '2026-06-01T15:30:00Z', workedMinutes: 570, expectedMinutes: 510, balanceMinutes: 60 }),
     day('2026-06-02', 'Tuesday', { clockInUtc: '2026-06-02T06:00:00Z', clockOutUtc: '2026-06-02T13:00:00Z', clockOutIsManual: true, workedMinutes: 420, expectedMinutes: 510, balanceMinutes: -90 }),
