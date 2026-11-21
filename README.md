@@ -32,7 +32,7 @@ docker compose up --build
 - The same credentials are saved in the local `.env` file (`SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`).
 - Every reviewer generates their own credentials, so no password needs to be sent by email.
 
-After signing in, the admin can add an employee and send them the invitation link, which lets the employee choose their own password. A new, empty database also contains four example employees.
+After signing in, the admin can add an employee and send them the invitation link, which lets the employee choose their own password. A new, empty database also contains four example employees with a few example shifts (shown as manual entries).
 
 ## Tests
 
