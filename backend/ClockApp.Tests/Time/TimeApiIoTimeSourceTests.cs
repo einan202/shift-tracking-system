@@ -56,23 +56,13 @@ public class TimeApiIoTimeSourceTests
     }
 
     [Fact]
-    public async Task Retries_once_after_a_failure()
+    public async Task Makes_a_single_attempt_and_fails_closed_on_502()
     {
-        var (source, handler) = Create((_, n) => n == 1 ? Json("", HttpStatusCode.BadGateway) : Json(RealResponse));
-
-        var time = await source.GetNowAsync();
-
-        Assert.Equal(2, handler.Requests.Count);
-        Assert.Equal(new DateOnly(2026, 11, 20), time.LocalDate);
-    }
-
-    [Fact]
-    public async Task Fails_closed_when_the_api_keeps_failing()
-    {
-        var (source, handler) = Create((_, _) => Json("", HttpStatusCode.ServiceUnavailable));
+        // Retries and provider fallback belong to ResilientTimeSource; the adapter itself is one attempt.
+        var (source, handler) = Create((_, _) => Json("", HttpStatusCode.BadGateway));
 
         await Assert.ThrowsAsync<TimeSourceException>(() => source.GetNowAsync());
-        Assert.Equal(2, handler.Requests.Count);
+        Assert.Single(handler.Requests);
     }
 
     [Fact]

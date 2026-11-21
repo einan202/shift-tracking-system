@@ -104,3 +104,39 @@ public class ZurichLocalInputTests
         Assert.Equal(new DateOnly(2026, 12, 31), ZurichTime.LocalDateOf(DateTimeOffset.Parse("2026-12-31T22:30:00Z")));
     }
 }
+
+public class ZurichFromUtcTests
+{
+    private static AttendanceTime Utc(string utc, bool dst, int offsetMinutes) =>
+        ZurichTime.FromUtc(DateTimeOffset.Parse(utc), dst, TimeSpan.FromMinutes(offsetMinutes), "test");
+
+    [Fact]
+    public void Winter_and_summer_instants_get_the_right_local_time()
+    {
+        Assert.Equal(new DateTime(2026, 11, 21, 13, 33, 29), Utc("2026-11-21T12:33:29Z", false, 60).LocalDateTime);
+        Assert.Equal(new DateTime(2026, 7, 4, 9, 0, 0), Utc("2026-07-04T07:00:00Z", true, 120).LocalDateTime);
+    }
+
+    [Fact]
+    public void Both_occurrences_of_the_fall_back_hour_are_distinct_instants_with_the_right_offsets()
+    {
+        var first = Utc("2026-10-25T00:30:00Z", true, 120);   // 02:30 CEST
+        var second = Utc("2026-10-25T01:30:00Z", false, 60);  // 02:30 CET
+
+        Assert.Equal(first.LocalDateTime, second.LocalDateTime);
+        Assert.NotEqual(first.UtcInstant, second.UtcInstant);
+    }
+
+    [Fact]
+    public void Spring_forward_instant_maps_past_the_gap()
+    {
+        Assert.Equal(new DateTime(2026, 3, 29, 3, 0, 0), Utc("2026-03-29T01:00:00Z", true, 120).LocalDateTime);
+    }
+
+    [Fact]
+    public void Dst_flag_or_offset_contradicting_the_rules_is_rejected()
+    {
+        Assert.Throws<TimeSourceException>(() => Utc("2026-07-04T07:00:00Z", false, 120));
+        Assert.Throws<TimeSourceException>(() => Utc("2026-07-04T07:00:00Z", true, 60));
+    }
+}
