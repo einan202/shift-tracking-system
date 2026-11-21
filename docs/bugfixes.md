@@ -41,3 +41,21 @@ Automated: new unit tests for both adapters (real-shaped response, wrong zone, D
 ### Open points
 - time.now documents no numeric rate limit that I could find, and 60 sequential requests were not throttled. A normal punch makes 1 request; the worst case is 4.
 - The time.now page asks for attribution ("Support This Free API (Required)"). Not done; decide before production use.
+
+## "Add missing record" defaulted to the browser's time zone and rejected it as a future time
+
+### Problem
+In the admin "Add missing record" dialog the date/time pickers started from the admin's browser clock (Israel, UTC+2 when this was reported). Zurich was one hour behind (13:54 vs 14:54 in the check), so a time picked from the default was later than "now" in Zurich and the server answered "Clock-in/Clock-out cannot be in the future".
+
+### Root cause
+The dialog's `datetime-local` inputs for a new record had no value and no limit, so the browser filled in and offered its own local time. The server validates against the real instant in UTC, so any value typed as Zurich time that is later than Zurich now is correctly rejected. The UI never told the form what Zurich "now" is.
+
+### Solution
+- `GET /api/admin/attendance` now returns `zurichNow` (server time converted to Europe/Zurich, `yyyy-MM-ddTHH:mm`; used only for UI defaults, nothing is recorded).
+- The dialog defaults to a normal working day on the Zurich date (08:00 to 17:00, never later than Zurich now), caps both inputs with `max = zurichNow`, and shows "It is now <date> <time> in Zurich". The browser's time zone is no longer used.
+- Server-side validation is unchanged.
+
+### Verification
+- Unit tests: `ZurichTime.ToLocal` (including 22:30 UTC becoming 00:30 the next day), the `zurichNow` field on the endpoint, and the default-times helper (late evening, afternoon, early morning, just after midnight).
+- Live, in Chrome with the machine in Israel time (14:54 Israel, 13:54 Zurich): the dialog opened with 08:00 and 13:54 and the note "It is now 2026-11-21 13:54 in Zurich". Saving those defaults produced only an "overlaps record" message for existing records, with no "future" error.
+
