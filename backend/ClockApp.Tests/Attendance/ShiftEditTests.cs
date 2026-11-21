@@ -158,6 +158,22 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
     }
 
     [ClockApp.Tests.Data.RequiresDbFact]
+    public async Task Error_names_the_existing_time_it_conflicts_with()
+    {
+        var s = await ArrangeAsync();
+        await using var _ = s.Factory;
+
+        // Monday is 08:00-12:00. A new clock-in of 13:00 collides with the CURRENT clock-out.
+        var r = await s.Client.PostAsJsonAsync("/api/attendance/me/shifts", Edit("2026-02-02", "2026-02-02T13:00:00", null, "WrongTimePunched"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
+        Assert.Contains("current clock-out 12:00", await r.Content.ReadAsStringAsync());
+
+        // A new clock-out of 07:00 is before the existing clock-in.
+        var r2 = await s.Client.PostAsJsonAsync("/api/attendance/me/shifts", Edit("2026-02-02", null, "2026-02-02T07:00:00", "WrongTimePunched"));
+        Assert.Contains("new clock-out 07:00 is before your clock-in 08:00", await r2.Content.ReadAsStringAsync());
+    }
+
+    [ClockApp.Tests.Data.RequiresDbFact]
     public async Task Overlapping_another_shift_is_rejected_and_an_employee_cannot_reach_other_users()
     {
         var s = await ArrangeAsync();

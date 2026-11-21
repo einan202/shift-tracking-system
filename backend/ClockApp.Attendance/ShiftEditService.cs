@@ -90,7 +90,7 @@ public sealed class ShiftEditService(AttendanceDbContext db, IMonthStateReader m
         if (day.Count == 0)
         {
             if (req.ClockInUtc is null || req.ClockOutUtc is null) throw Invalid("This day has no shift yet: enter both clock-in and clock-out.");
-            Validate(req.ClockInUtc.Value, req.ClockOutUtc, nowUtc, req.Date, effective, []);
+            Validate(req.ClockInUtc.Value, req.ClockOutUtc, nowUtc, req.Date, effective, [], true, true);
             rows.Add(Row(CorrectionKind.Add, null, req.ClockInUtc.Value, req.ClockOutUtc));
             after.Add(new EffectiveRecord(null, 0, req.ClockInUtc.Value, req.ClockOutUtc, req.Date, true, false, false, null, null));
         }
@@ -108,7 +108,7 @@ public sealed class ShiftEditService(AttendanceDbContext db, IMonthStateReader m
 
             foreach (var (target, (newIn, newOut)) in touched)
             {
-                Validate(newIn, newOut, nowUtc, req.Date, effective, touched.Select(t => t.Key).ToList());
+                Validate(newIn, newOut, nowUtc, req.Date, effective, touched.Select(t => t.Key).ToList(), newIn != target.In, newOut != target.Out);
                 rows.Add(Row(CorrectionKind.Adjust, target, newIn, newOut));
                 var closes = target.IsOpen && newOut is not null;
                 if (closes) close = target.RecordId;
@@ -120,13 +120,19 @@ public sealed class ShiftEditService(AttendanceDbContext db, IMonthStateReader m
 
     private static void Validate(
         DateTimeOffset newIn, DateTimeOffset? newOut, DateTimeOffset nowUtc, DateOnly date,
-        List<EffectiveRecord> effective, List<EffectiveRecord> excluded)
+        List<EffectiveRecord> effective, List<EffectiveRecord> excluded, bool inChanged, bool outChanged)
     {
         if (ZurichTime.LocalDateOf(newIn) != date) throw Invalid("The clock-in must be on the day you are editing.");
         if (newIn > nowUtc) throw Invalid(Future("Clock-in", newIn, nowUtc));
         if (newOut is { } o)
         {
-            if (o <= newIn) throw Invalid("Clock-out must be after clock-in.");
+            if (o <= newIn)
+            {
+                string t(DateTimeOffset x) => ZurichTime.ToLocal(x).ToString("HH:mm");
+                throw Invalid(outChanged && !inChanged ? $"The new clock-out {t(o)} is before your clock-in {t(newIn)}."
+                    : inChanged && !outChanged ? $"The new clock-in {t(newIn)} is after your current clock-out {t(o)}. Change the clock-out too."
+                    : $"The clock-out {t(o)} must be after the clock-in {t(newIn)}.");
+            }
             if (o - newIn > CorrectionService.MaxShiftLength)
                 throw Invalid($"A shift cannot be longer than 24 hours (this one is {(o - newIn).TotalHours:0.#} h).");
             if (o > nowUtc) throw Invalid(Future("Clock-out", o, nowUtc));
