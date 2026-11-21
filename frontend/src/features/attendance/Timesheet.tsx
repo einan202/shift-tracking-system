@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../api'
+import ShiftEditDialog from './ShiftEditDialog'
 import { formatBalance, formatDate, formatHours, formatTime } from '../../format'
 
 export type SheetDay = {
@@ -29,6 +30,8 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
   const [ym, setYm] = useState<{ year: number; month: number } | null>(null)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [error, setError] = useState(false)
+  const [editing, setEditing] = useState<SheetDay | null>(null)
+  const [bump, setBump] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -36,7 +39,7 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
       if (r.ok && r.data) { setSheet(r.data); setError(false) } else setError(true)
     } catch { setError(true) }
   }, [ym])
-  useEffect(() => { void load() }, [load, reloadKey])
+  useEffect(() => { void load() }, [load, reloadKey, bump])
 
   if (error) return <section className="panel"><p role="alert" className="notice notice--error">Could not load the timesheet.</p></section>
   if (!sheet) return <section className="panel" aria-busy="true"><p>Loading…</p></section>
@@ -75,7 +78,7 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
       <div className="table-wrap">
         <table className="timesheet">
           <thead>
-            <tr><th>Date</th><th>Day</th><th>Clock-in</th><th>Clock-out</th><th className="r">Worked</th><th className="r">Expected</th><th className="r">Balance</th></tr>
+            <tr><th>Date</th><th>Day</th><th>Clock-in</th><th>Clock-out</th><th className="r">Worked</th><th className="r">Expected</th><th className="r">Balance</th><th><span className="sr-only">Actions</span></th></tr>
           </thead>
           <tbody>
             {sheet.days.map((d) => (
@@ -95,11 +98,13 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
                 <td className="r num">{d.workedMinutes != null ? formatHours(d.workedMinutes) : ''}</td>
                 <td className="r num">{d.expectedMinutes > 0 ? formatHours(d.expectedMinutes) : ''}</td>
                 <td className={`r num ${d.balanceMinutes != null ? balanceClass(d.balanceMinutes) : ''}`}>{d.balanceMinutes != null ? formatBalance(d.balanceMinutes) : ''}</td>
+                <td>{!d.isFuture && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {editing && <ShiftEditDialog day={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setBump((b) => b + 1) }} />}
     </section>
   )
 }

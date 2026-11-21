@@ -28,11 +28,11 @@ function renderSheet() {
   return render(<Timesheet />)
 }
 
-it('shows the agreed 7 columns and every day of the month data', async () => {
+it('shows the agreed 7 columns (plus a screen-reader-only actions column) and every day', async () => {
   renderSheet()
 
   await screen.findByRole('table')
-  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Date', 'Day', 'Clock-in', 'Clock-out', 'Worked', 'Expected', 'Balance'])
+  expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Date', 'Day', 'Clock-in', 'Clock-out', 'Worked', 'Expected', 'Balance', 'Actions'])
   expect(screen.getAllByRole('row')).toHaveLength(1 + sheet.days.length)
 })
 
@@ -51,7 +51,7 @@ it('future days show Expected only, today shows in progress without Worked/Balan
   renderSheet()
   await screen.findByRole('table')
 
-  const cells = (date: string) => within(document.querySelector(`tr[data-date="${date}"]`) as HTMLElement).getAllByRole('cell').map((c) => c.textContent)
+  const cells = (date: string) => within(document.querySelector(`tr[data-date="${date}"]`) as HTMLElement).getAllByRole('cell').slice(0, 7).map((c) => c.textContent)
   expect(cells('2026-06-11')).toEqual(['11.06.2026', 'Thu', '', '', '', '8h 30m', ''])           // future
   expect(cells('2026-06-10')[3]).toContain('in progress'); expect(cells('2026-06-10')[4]).toBe(''); expect(cells('2026-06-10')[6]).toBe('')   // today, running
   expect(cells('2026-06-06')).toEqual(['06.06.2026', 'Sat', '', '', '', '', ''])                   // Saturday
