@@ -80,7 +80,7 @@ The dialog's `datetime-local` inputs for a new record had no value and no limit,
 
 ### Solution
 - `Adjust` must reference a record (422 otherwise); new DB check `CK_AttendanceCorrections_KindTarget` (Add has no target, Adjust has one).
-- Clock-out is rejected with the existing fail-closed 503 when the API time is not after the effective clock-in; the record stays open.
+- Clock-out is rejected when the API time is not after the effective (corrected) clock-in and the record stays open. (First a 503; changed to a 409 in the next section.)
 - `UserLock` throws `AttendanceBusyException`; punches and corrections answer a retryable 503 (`Retry-After` on punches) and write nothing.
 - New DB check `CK_AttendanceRecords_OpenHasNoOut`. Both checks are in migration `AddIntegrityChecks`.
 
@@ -89,4 +89,20 @@ The dialog's `datetime-local` inputs for a new record had no value and no limit,
 - Full backend suite 112 passed, 2 skipped (opt-in live tests).
 - Live: the Adjust reproduction now returns 422 and stores no extra row; the migration applied and both constraints exist in the running database.
 - Data note: the dev database contained one such invalid `Adjust` row, created by the reproduction itself; it was deleted before the migration so the constraint could be added. Any existing database with such rows would need them reviewed first.
+
+## Before merge: least-privilege database user, invite token in the URL fragment, 409 for correction conflicts
+
+### Problem
+- The backend connected to SQL Server as `sa`; nothing at the database level kept `AttendanceCorrections` append-only (PR review finding 2).
+- Invite/reset links carried the token in the query string (`/set-password?token=...`), so it ended up in nginx access logs and browser history (finding 4).
+- A clock-out earlier than an admin-corrected clock-in returned 503 ("time service unavailable"), although the time provider was fine: it is a data conflict.
+
+### Solution
+- **Database user:** `ConnectionStrings:Default` is now `clockapp_app`, created at startup by `AppUserProvisioner` using `ConnectionStrings:Migration` (sa), which is used only for migrations, provisioning and admin seeding; its pooled connections are cleared afterwards. Permissions: read/insert/update on `Users`, `AttendanceRecords`; `AttendanceCorrections` SELECT and INSERT only (UPDATE and DELETE denied); `ShiftSettings` SELECT and UPDATE; no DELETE on punches or users, no DDL, no access to the migrations history. `APP_DB_PASSWORD` is a new required setting in `.env`. The provisioner is idempotent, keeps the login password in sync, and only accepts plain identifiers as the user name (it is used in DDL). Limitation: new tables need their grants added to `AppUserProvisioner`.
+- **Invite fragment:** the API returns `/set-password#token=...`; the page reads the token once and removes it from the address bar (`history.replaceState`). Old `?token=` links still work once.
+- **409:** a clock-out not after the corrected clock-in now returns 409 with the corrected time in the message and writes nothing. A clock-out not after the genuine (original) clock-in is still a 503, since that points at an inconsistent time source. The UI already shows the server message for a 409.
+
+### Verification
+- Tests: the API integration tests now run as the least-privilege user (so a missing grant fails them); new permission tests (corrections cannot be updated or deleted, punches and users cannot be deleted, no DDL, migration history unreadable, normal app operations work, provisioner idempotent and password-rotating, unsafe names rejected); fragment helper tests (reads fragment, strips URL, survives re-render, legacy query link, no token); API test that `invitePath` uses the fragment; 409 test (and success once the time is after the corrected clock-in). Found and fixed on the way: `sp_getapplock` is scoped per database, so the provisioning lock is taken in `master`; first-time runs with parallel fixtures failed before that and passed 4 of 4 after it.
+- Live: the stack starts with the new connection strings (log line "Application database user clockapp_app is provisioned"); after startup the app's sessions run as `clockapp_app` and no pooled `sa` session remains; the smoke test passes. In Chrome, an invite link opened with the token in the fragment showed `/set-password` immediately (hash and search empty), the form worked, and the password was saved with no console errors.
 
