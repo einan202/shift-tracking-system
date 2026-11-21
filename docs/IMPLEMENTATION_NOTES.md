@@ -108,3 +108,10 @@ Frontend only (`Timesheet.tsx`, `ClockPanel.tsx`, `index.css`); no data, calcula
 - **Phones (≤720 px):** each day becomes a compact card (date, weekday and balance on top; clock-in, clock-out, worked; expected and the Edit/Add/Delete buttons at 44 px), implemented with CSS only plus `data-label` attributes; empty cells are hidden so non-working days stay one line; no horizontal scroll at 375 px.
 - **Clock:** a "Clock" heading like the other panels and a status box with a left accent bar (red while on shift); the punch button and behaviour are unchanged.
 - Checked in the browser at 375 and 1280 px with a throwaway employee (since deactivated), no console errors. Not exercised in the browser: an actual Clock In/Out press, the Edit/Delete dialogs (covered by their unit tests), and in-progress/needs-correction rows.
+
+## Review follow-up (independent review of the branch, verdict: Approve)
+- **Fixed:** an out-of-range local time (for example year 1) in a shift edit returned HTTP 500; `ZurichTime.LocalToUtc` now rejects years outside 2000-2100, so the endpoint answers 422 (unit test plus two API cases in the invalid-edit test).
+- **Fixed:** creating an employee saved the user and the first schedule version in two separate saves; they now share one transaction, so an employee can never exist without a schedule.
+- **Added tests:** fall-back day 2026-10-25 (01:00-05:00 local counts 5 real hours) and a clock-out after midnight (needs correction by default, counted on the start date for overnight-allowed employees).
+- **Correction to the 1.2 notes:** Iteration 1.2 is only partly done. The backend schedule endpoints exist, but there is no UI to change a schedule or see its history, and no start-date edit rules (BACKLOG F8, F9). The dialog also cannot set a next-day clock-out (F10).
+- Not covered by the review: browser behaviour of the dialogs, live-database migration re-run, a real clock-in on a non-working day.
