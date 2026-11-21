@@ -39,8 +39,7 @@ public static class EmployeeEndpoints
             // Initial schedule (effective from the employment start date). Defaults: today's Zurich date and the company
             // default duration Monday-Friday.
             var startDate = req.EmploymentStartDate ?? ZurichTime.LocalDateOf(clock.GetUtcNow());
-            var defaultMinutes = (await db.ShiftSettings.AsNoTracking().SingleAsync()).DurationMinutes;
-            var minutes = req.Schedule?.Minutes ?? [defaultMinutes, defaultMinutes, defaultMinutes, defaultMinutes, defaultMinutes, 0, 0];
+            var minutes = req.Schedule?.Minutes ?? (await db.ShiftSettings.AsNoTracking().SingleAsync()).Week;
             var problem = ScheduleResolver.Validate(minutes);
             if (problem is not null) return Results.BadRequest(new { error = problem });
 

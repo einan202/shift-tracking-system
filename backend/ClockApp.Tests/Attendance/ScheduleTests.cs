@@ -140,6 +140,32 @@ public sealed class ScheduleApiTests : IClassFixture<DatabaseFixture>
     }
 
     [RequiresDbFact]
+    public async Task Company_default_week_is_per_weekday_and_prefills_new_employees()
+    {
+        var (f, c, admin, _) = await Start(); await using var _f = f;
+        var before = await (await Send(c, admin, HttpMethod.Get, "/api/admin/settings/shift")).Content.ReadFromJsonAsync<JsonElement>();
+        try
+        {
+            int[] week = [510, 540, 465, 480, 360, 0, 0];
+            var put = await Send(c, admin, HttpMethod.Put, "/api/admin/settings/shift", new { minutes = week });
+            Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+            var got = await (await Send(c, admin, HttpMethod.Get, "/api/admin/settings/shift")).Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(week, got.GetProperty("minutes").EnumerateArray().Select(x => x.GetInt32()).ToArray());
+
+            // Invalid weeks are rejected; a new employee without an explicit schedule gets the company week.
+            Assert.Equal(HttpStatusCode.BadRequest, (await Send(c, admin, HttpMethod.Put, "/api/admin/settings/shift", new { minutes = new[] { 0, 0, 0, 0, 0, 0, 0 } })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await Send(c, admin, HttpMethod.Put, "/api/admin/settings/shift", new { minutes = new[] { 480, 480 } })).StatusCode);
+            var id = await CreateEmployee(c, admin, new { email = NewEmail(), fullName = "Prefilled" });
+            var v = (await (await Send(c, admin, HttpMethod.Get, $"/api/admin/employees/{id}/schedule")).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("versions").EnumerateArray().Single();
+            Assert.Equal(week, v.GetProperty("minutes").EnumerateArray().Select(x => x.GetInt32()).ToArray());
+        }
+        finally
+        {
+            await Send(c, admin, HttpMethod.Put, "/api/admin/settings/shift", new { minutes = before.GetProperty("minutes").EnumerateArray().Select(x => x.GetInt32()).ToArray() });
+        }
+    }
+
+    [RequiresDbFact]
     public async Task Five_different_weekday_durations_round_trip_and_editing_keeps_the_other_days()
     {
         var (f, c, admin, _) = await Start(); await using var _f = f;
