@@ -12,7 +12,7 @@ type Row = {
   recordId: number | null; source: 'punch' | 'manual'
   original: { clockInUtc: string; clockOutUtc: string | null } | null
   effective: { clockInUtc: string; clockOutUtc: string | null; workDate: string }
-  isAdjusted: boolean; isOpen: boolean; history: Hist[]
+  isAdjusted: boolean; isVoided?: boolean; isOpen: boolean; history: Hist[]
 }
 type View = { from: string; to: string; zurichNow: string; records: Row[] }
 
@@ -92,10 +92,11 @@ export default function AttendanceAdmin() {
                   <td className="num">
                     {r.original ? `${formatTime(r.original.clockInUtc)} – ${r.original.clockOutUtc ? formatTime(r.original.clockOutUtc) : 'open'}` : <span className="muted">manual entry</span>}
                   </td>
-                  <td className="num">
+                  <td className={`num ${r.isVoided ? 'voided' : ''}`}>
+                    {r.isVoided && <span className="tag tag--warn">deleted</span>}
                     {formatTime(r.effective.clockInUtc)} – {r.effective.clockOutUtc ? formatTime(r.effective.clockOutUtc) : <em>missing clock-out</em>}
                     {r.source === 'manual' && <span className="tag">added</span>}
-                    {r.isAdjusted && <span className="tag">corrected</span>}
+                    {r.isAdjusted && !r.isVoided && <span className="tag">corrected</span>}
                     {r.history.length > 0 && (
                       <details>
                         <summary>History ({r.history.length})</summary>
@@ -104,8 +105,8 @@ export default function AttendanceAdmin() {
                             <li key={h.id}>
                               <strong>{h.kind}</strong> by {h.createdBy ?? 'admin'} on {formatStamp(h.createdAtUtc)}: “{h.reason}”
                               <br />
-                              {h.kind !== 'Add' && <><span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span><br /></>}
-                              <span className="muted">now {formatRange(h.correctedClockInUtc, h.correctedClockOutUtc)}</span>
+                              {h.kind === 'Adjust' && <><span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span><br /></>}
+                              <span className="muted">{h.kind === 'Void' ? `shift ${formatRange(h.previousClockInUtc, h.previousClockOutUtc)} deleted` : `now ${formatRange(h.correctedClockInUtc, h.correctedClockOutUtc)}`}</span>
                             </li>
                           ))}
                         </ul>

@@ -45,7 +45,7 @@ Facts and engineering decisions made while building `.claude/plan-attendance-day
 - Rules: reason required (Other needs text), blocked while any interval of the day is open, no future days, nothing before the employment start date, month must be Open, empty day rejected. Runs under `UserLock` in one transaction.
 - [Eng] Delete is a separate endpoint (not an option of set-shift) so the alert dialog and the audit rows stay unambiguous.
 - UI: Delete button on finished days, alert dialog stating the consequence (day counts as no work, balance becomes the negative expected) and a reason.
-- Known gap: the admin attendance view calls `EffectiveAttendance.LoadAsync` without voided rows, so deleted shifts vanish from the admin screen until 1.7 adds the history variant.
+- Deleted shifts are shown to admins (flagged "deleted", struck through, with the Void in the history).
 - Lint: the `set-state-in-effect` warning in `Timesheet.tsx` is fixed. Four older warnings remain in `auth.tsx`, `ClockPanel.tsx`, `Employees.tsx`, `AttendanceAdmin.tsx` (same pattern, pre-existing).
 
 ## 1.4b (partial) and admin-history fix

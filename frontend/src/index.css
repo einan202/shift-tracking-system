@@ -123,3 +123,6 @@ tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 
 .btn--danger { background: var(--signal); border-color: var(--signal); color: #fff; }
 .timesheet td .btn + .btn { margin-left: .35rem; }
+
+.voided { color: #8b97a4; text-decoration: line-through; }
+.voided .tag { text-decoration: none; }
