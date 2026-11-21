@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
+import DeleteShiftDialog from './DeleteShiftDialog'
 import ShiftEditDialog from './ShiftEditDialog'
 import { formatBalance, formatDate, formatHours, formatTime } from '../../format'
 
@@ -31,6 +32,7 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
   const [sheet, setSheet] = useState<Sheet | null>(null)
   const [error, setError] = useState(false)
   const [editing, setEditing] = useState<SheetDay | null>(null)
+  const [deleting, setDeleting] = useState<SheetDay | null>(null)
   const [bump, setBump] = useState(0)
 
   useEffect(() => {
@@ -98,12 +100,13 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
                 <td className="r num">{d.workedMinutes != null ? formatHours(d.workedMinutes) : ''}</td>
                 <td className="r num">{d.expectedMinutes > 0 ? formatHours(d.expectedMinutes) : ''}</td>
                 <td className={`r num ${d.balanceMinutes != null ? balanceClass(d.balanceMinutes) : ''}`}>{d.balanceMinutes != null ? formatBalance(d.balanceMinutes) : ''}</td>
-                <td>{!d.isFuture && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
+                <td>{!d.isFuture && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setEditing(d)}>{d.clockInUtc ? 'Edit' : 'Add'}<span className="sr-only"> {formatDate(d.date)}</span></button>}{!d.isFuture && d.clockInUtc && !d.inProgress && (!sheet.employmentStartDate || d.date >= sheet.employmentStartDate) && <button className="btn btn--small" onClick={() => setDeleting(d)}>Delete<span className="sr-only"> {formatDate(d.date)}</span></button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {deleting && <DeleteShiftDialog day={deleting} onClose={() => setDeleting(null)} onDeleted={() => { setDeleting(null); setBump((b) => b + 1) }} />}
       {editing && <ShiftEditDialog day={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setBump((b) => b + 1) }} />}
     </section>
   )

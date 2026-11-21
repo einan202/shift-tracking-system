@@ -120,3 +120,6 @@ tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 .bal--plus { color: var(--go); font-weight: 700; }
 .bal--minus { color: var(--signal); font-weight: 700; }
 .bal--zero { color: #6b7785; }
+
+.btn--danger { background: var(--signal); border-color: var(--signal); color: #fff; }
+.timesheet td .btn + .btn { margin-left: .35rem; }
