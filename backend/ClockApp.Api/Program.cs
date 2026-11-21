@@ -120,6 +120,7 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
 app.MapEmployeeEndpoints();
 app.MapAttendanceEndpoints();
+app.MapMonthlyReportEndpoint();
 app.MapSettingsEndpoints();
 app.MapAdminAttendanceEndpoints();
 
