@@ -104,8 +104,7 @@ export default function AttendanceAdmin() {
                             <li key={h.id}>
                               <strong>{h.kind}</strong> by {h.createdBy ?? 'admin'} on {formatStamp(h.createdAtUtc)}: “{h.reason}”
                               <br />
-                              <span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span>
-                              <br />
+                              {h.kind !== 'Add' && <><span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span><br /></>}
                               <span className="muted">now {formatRange(h.correctedClockInUtc, h.correctedClockOutUtc)}</span>
                             </li>
                           ))}
