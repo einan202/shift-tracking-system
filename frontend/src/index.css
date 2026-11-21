@@ -85,9 +85,11 @@ th.r, td.r { text-align: right; }
 thead th { font-size: .85rem; color: var(--steel); }
 tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 
-.tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); }
-.tabs__tab { font: inherit; font-weight: 600; padding: .6rem 1rem; border: 0; background: transparent; color: var(--steel); cursor: pointer; border-bottom: 3px solid transparent; }
-.tabs__tab[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--signal); }
+.tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin-bottom: 1rem; overflow-x: auto; white-space: nowrap; }
+.tabs__tab { font: inherit; font-weight: 600; padding: .6rem 1rem; color: var(--steel); text-decoration: none; border-bottom: 3px solid transparent; flex: none; }
+.tabs__tab:hover { color: var(--ink); }
+.tabs__tab[aria-current='page'] { color: var(--ink); border-bottom-color: var(--signal); }
+.narrow-panel { max-width: 24rem; }
 
 .overlay { position: fixed; inset: 0; background: rgba(18, 32, 46, .55); display: grid; place-items: center; padding: 1rem; }
 .dialog { background: var(--surface); border-radius: var(--radius); padding: 1.25rem; width: min(30rem, 100%); max-height: 100%; overflow: auto; }
