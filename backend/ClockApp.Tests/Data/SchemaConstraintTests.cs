@@ -94,6 +94,51 @@ public class SchemaConstraintTests(DatabaseFixture fixture) : IClassFixture<Data
     }
 
     [RequiresDbFact]
+    public async Task An_open_record_cannot_have_a_clock_out()
+    {
+        var (db, user) = await UserInDb();
+        await using var _ = db;
+        var bad = Open(user.Id);
+        bad.ClockOutUtc = T0.AddHours(8).ToUniversalTime();   // IsOpen = true AND ClockOutUtc set
+        db.AttendanceRecords.Add(bad);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    private static AttendanceCorrection Correction(int userId, int adminId, CorrectionKind kind, long? recordId) => new()
+    {
+        Kind = kind, AttendanceRecordId = recordId, UserId = userId, WorkDate = new DateOnly(2026, 6, 1),
+        CorrectedClockInUtc = T0.ToUniversalTime(), CorrectedClockOutUtc = T0.AddHours(8).ToUniversalTime(),
+        Reason = "schema test", CreatedByUserId = adminId, CreatedAtUtc = T0.AddDays(2).ToUniversalTime(),
+    };
+
+    [RequiresDbFact]
+    public async Task An_adjustment_must_target_a_record_and_an_addition_must_not()
+    {
+        var (db, user) = await UserInDb();
+        await using var _ = db;
+        var admin = NewUser(UserRole.Admin);
+        db.Users.Add(admin);
+        var punch = Open(user.Id);
+        db.AttendanceRecords.Add(punch);
+        await db.SaveChangesAsync();
+
+        // Adjust without a record, and Add that names a record, are both rejected by the database.
+        db.AttendanceCorrections.Add(Correction(user.Id, admin.Id, CorrectionKind.Adjust, null));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+
+        db.AttendanceCorrections.Add(Correction(user.Id, admin.Id, CorrectionKind.Add, punch.Id));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+
+        // The valid shapes are accepted.
+        db.AttendanceCorrections.Add(Correction(user.Id, admin.Id, CorrectionKind.Adjust, punch.Id));
+        db.AttendanceCorrections.Add(Correction(user.Id, admin.Id, CorrectionKind.Add, null));
+        await db.SaveChangesAsync();
+    }
+
+    [RequiresDbFact]
     public async Task Closed_records_and_other_users_do_not_conflict_with_an_open_record()
     {
         var (db, user) = await UserInDb();

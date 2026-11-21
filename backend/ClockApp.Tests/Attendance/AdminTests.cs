@@ -85,6 +85,12 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
         return (await db.AttendanceRecords.Where(r => r.UserId == c.EmployeeId).OrderByDescending(r => r.Id).FirstAsync()).Id;
     }
 
+    private async Task<List<AttendanceRecord>> RecordsAsync(int userId)
+    {
+        await using var db = _db.CreateContext();
+        return await db.AttendanceRecords.Where(r => r.UserId == userId).OrderBy(r => r.ClockInUtc).ToListAsync();
+    }
+
     private async Task<JsonElement> AdminViewAsync(Ctx c, string from, string to)
     {
         var res = await Send(c, c.AdminToken, HttpMethod.Get, $"/api/admin/attendance?userId={c.EmployeeId}&from={from}&to={to}");
@@ -195,6 +201,66 @@ public sealed class AdminTests : IClassFixture<DatabaseFixture>
         Assert.Contains("overlap", await overlap.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.Created, touching.StatusCode);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, addInside.StatusCode);
+    }
+
+    [RequiresDbFact]
+    public async Task Adjust_without_a_record_id_is_rejected_even_when_the_employee_has_manual_entries()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+        // A manual (Add) entry has no record id; "null == null" used to let an Adjust match it.
+        await Correct(c, new { kind = "Add", userId = c.EmployeeId, clockInLocal = "2026-02-16T09:00:00", clockOutLocal = "2026-02-16T10:00:00", reason = "Manual entry first" });
+
+        var res = await Correct(c, new { kind = "Adjust", userId = c.EmployeeId, clockOutLocal = "2026-02-16T11:00:00", reason = "No record id given" });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+        await using var db = _db.CreateContext();
+        Assert.Equal(1, await db.AttendanceCorrections.CountAsync(x => x.UserId == c.EmployeeId)); // only the Add; no dead audit row
+    }
+
+    [RequiresDbFact]
+    public async Task Clock_out_must_be_after_the_corrected_clock_in()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+        var id = await PunchAsync(c, "2026-02-17T09:00:00", null);
+        // Admin moves the open record's clock-in to 10:00 (still in the past, so the correction itself is valid).
+        var fix = await Correct(c, new { kind = "Adjust", userId = c.EmployeeId, attendanceRecordId = id, clockInLocal = "2026-02-17T10:00:00", reason = "Started later than recorded" });
+        Assert.Equal(HttpStatusCode.Created, fix.StatusCode);
+
+        // Time API says 09:30: after the ORIGINAL clock-in (09:00) but before the corrected one (10:00).
+        c.Time.SetZurich("2026-02-17T09:30:00", dst: false);
+        var res = await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-out");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, res.StatusCode);
+        var rec = Assert.Single(await RecordsAsync(c.EmployeeId));
+        Assert.True(rec.IsOpen);
+        Assert.Null(rec.ClockOutUtc);
+    }
+
+    [RequiresDbFact]
+    public async Task A_busy_attendance_lock_gives_a_retryable_503_not_a_server_error()
+    {
+        var c = await StartAsync(); await using var _ = c.Factory;
+        c.Time.SetZurich("2026-02-18T09:00:00", dst: false);
+
+        // Hold this employee's lock the way a long-running punch/correction would.
+        await using var holder = new Microsoft.Data.SqlClient.SqlConnection(_db.ConnectionString);
+        await holder.OpenAsync();
+        await using var tx = (Microsoft.Data.SqlClient.SqlTransaction)await holder.BeginTransactionAsync();
+        await using (var cmd = holder.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = $"EXEC sp_getapplock @Resource = 'att:{c.EmployeeId}', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        var res = await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-in"); // waits ~5 s, then gives up
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, res.StatusCode);
+        Assert.True(res.Headers.Contains("Retry-After"));
+        Assert.Empty(await RecordsAsync(c.EmployeeId));
+
+        await tx.CommitAsync(); // lock released: the same punch now works
+        Assert.Equal(HttpStatusCode.OK, (await Send(c, c.EmployeeToken, HttpMethod.Post, "/api/attendance/clock-in")).StatusCode);
     }
 
     [RequiresDbFact]
