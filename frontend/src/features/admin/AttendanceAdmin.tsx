@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../../api'
-import { formatDay, formatStamp, formatTime } from '../../format'
+import { formatDay, formatRange, formatStamp, formatTime } from '../../format'
 import CorrectionDialog, { type CorrectionTarget } from './CorrectionDialog'
 import type { Employee } from './Employees'
 
@@ -19,7 +19,6 @@ type View = { from: string; to: string; zurichNow: string; records: Row[] }
 const pad = (n: number) => String(n).padStart(2, '0')
 const daysIn = (y: number, m: number) => [31, (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
 const range = (y: number, m: number) => `from=${y}-${pad(m)}-01&to=${y}-${pad(m)}-${pad(daysIn(y, m))}`
-const clockText = (iso: string | null) => (iso ? formatStamp(iso) : 'open')
 
 /** Admin view of one employee's month: original punches, effective values, and the audit history. */
 export default function AttendanceAdmin() {
@@ -105,9 +104,9 @@ export default function AttendanceAdmin() {
                             <li key={h.id}>
                               <strong>{h.kind}</strong> by {h.createdBy ?? 'admin'} on {formatStamp(h.createdAtUtc)}: “{h.reason}”
                               <br />
-                              <span className="muted">
-                                was {clockText(h.previousClockInUtc)} – {clockText(h.previousClockOutUtc)}, now {clockText(h.correctedClockInUtc)} – {clockText(h.correctedClockOutUtc)}
-                              </span>
+                              <span className="muted">was {formatRange(h.previousClockInUtc, h.previousClockOutUtc)}</span>
+                              <br />
+                              <span className="muted">now {formatRange(h.correctedClockInUtc, h.correctedClockOutUtc)}</span>
                             </li>
                           ))}
                         </ul>
