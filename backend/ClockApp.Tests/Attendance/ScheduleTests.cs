@@ -140,6 +140,35 @@ public sealed class ScheduleApiTests : IClassFixture<DatabaseFixture>
     }
 
     [RequiresDbFact]
+    public async Task Five_different_weekday_durations_round_trip_and_editing_keeps_the_other_days()
+    {
+        var (f, c, admin, _) = await Start(); await using var _f = f;
+        int[] week = [510, 540, 465, 480, 360, 0, 0];
+        var id = await CreateEmployee(c, admin, new { email = NewEmail(), fullName = "Own Durations", employmentStartDate = "2026-06-01", schedule = new { minutes = week } });
+
+        async Task<int[][]> Versions() => (await (await Send(c, admin, HttpMethod.Get, $"/api/admin/employees/{id}/schedule")).Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("versions").EnumerateArray().Select(v => v.GetProperty("minutes").EnumerateArray().Select(x => x.GetInt32()).ToArray()).ToArray();
+        Assert.Equal(week, (await Versions()).Single());
+
+        // Change only Wednesday (to 8h) from a later month: the new version keeps the other days as sent, the old one stays untouched.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var from = new DateOnly(today.Year, today.Month, 1).AddMonths(1);
+        int[] edited = [510, 540, 480, 480, 360, 0, 0];
+        var res = await Send(c, admin, HttpMethod.Post, $"/api/admin/employees/{id}/schedule", new { effectiveFrom = from.ToString("yyyy-MM-dd"), minutes = edited });
+        Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+        var all = await Versions();
+        Assert.Equal(2, all.Length);
+        Assert.Contains(week, all, new IntArrayComparer());
+        Assert.Contains(edited, all, new IntArrayComparer());
+    }
+
+    private sealed class IntArrayComparer : IEqualityComparer<int[]>
+    {
+        public bool Equals(int[]? a, int[]? b) => a is not null && b is not null && a.SequenceEqual(b);
+        public int GetHashCode(int[] o) => o.Aggregate(17, (h, x) => h * 31 + x);
+    }
+
+    [RequiresDbFact]
     public async Task A_custom_start_date_and_weekday_durations_are_stored()
     {
         var (f, c, admin, _) = await Start(); await using var _f = f;

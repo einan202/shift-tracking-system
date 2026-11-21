@@ -30,6 +30,30 @@ public class MonthSheetTests
         MonthSheet.Build(2026, 6, rec, [Week], Start, today);
 
     [Fact]
+    public void Every_weekday_uses_its_own_independent_duration_for_expected_balance_and_totals()
+    {
+        // Mon 8h30, Tue 9h, Wed 7h45, Thu 8h, Fri 6h, weekend off.
+        var own = new EmployeeScheduleVersion
+        {
+            Id = 2, EffectiveFrom = Start, ExpectedMinutesMon = 510, ExpectedMinutesTue = 540, ExpectedMinutesWed = 465,
+            ExpectedMinutesThu = 480, ExpectedMinutesFri = 360,
+        };
+        var r = MonthSheet.Build(2026, 6, [Punch("2026-06-01T09:00", "2026-06-01T17:00"), Punch("2026-06-02T09:00", "2026-06-02T18:30")],
+            [own], Start, new DateOnly(2026, 7, 1));
+
+        Assert.Equal(510, Day(r, 1).ExpectedMinutes);   // Mon
+        Assert.Equal(540, Day(r, 2).ExpectedMinutes);   // Tue
+        Assert.Equal(465, Day(r, 3).ExpectedMinutes);   // Wed
+        Assert.Equal(480, Day(r, 4).ExpectedMinutes);   // Thu
+        Assert.Equal(360, Day(r, 5).ExpectedMinutes);   // Fri
+        Assert.Equal(0, Day(r, 6).ExpectedMinutes);     // Sat
+        Assert.Equal(0, Day(r, 7).ExpectedMinutes);     // Sun
+        Assert.Equal(-30, Day(r, 1).BalanceMinutes);    // worked 8h against 8h30
+        Assert.Equal(+30, Day(r, 2).BalanceMinutes);    // worked 9h30 against 9h
+        Assert.Equal(5 * 510 + 5 * 540 + 4 * 465 + 4 * 480 + 4 * 360, r.MonthToDate.WholeMonthExpectedMinutes);
+    }
+
+    [Fact]
     public void Lists_every_calendar_day_with_expected_per_weekday()
     {
         var r = Build(new DateOnly(2026, 7, 1));   // month is over
