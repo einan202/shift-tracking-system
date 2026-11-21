@@ -53,3 +53,12 @@ Facts and engineering decisions made while building `.claude/plan-attendance-day
 - Bug fixed (user report): admin history of a manually added shift showed only the `Add` row because later `Adjust` rows reference it through `TargetCorrectionId` (added in 1.1) and the admin endpoint only matched on the Add id. Now both are listed in order; regression test added. The UI no longer prints "was open – open" for `Add` rows.
 - NOT done yet: the post-clock-out prompt for stale shifts, DST offset selection in the dialog (limitation unchanged: ambiguous times are rejected with 422), and the long-shift timer format. The backend rules for "needs correction", the 24 h cap on corrected intervals and raw-span overlap already exist and are tested (1.3/1.4).
 - Admin attendance table mirroring the employee timesheet (consolidated day + per-interval history) is iteration 1.7, not started.
+
+## Final state and known limitations (submission)
+- **Deleted shifts in the admin view:** shown (flagged "deleted", struck through, Void row in the history) since `9c8f99c`/`23fd93f`. Covered by an API test; **not yet checked visually in the browser**. (Before those commits they were invisible to admins.)
+- **Inconsistency, behaviour unchanged pending your decision:** clock-in is refused on days outside the employee's schedule, but an employee can still *add* a shift on such a day through the timesheet "Add" button (with a reason). Intended requirement not yet confirmed.
+- **Not implemented:** post-clock-out prompt for stale shifts (the backend "needs correction" rules exist), DST offset selection in the dialog (ambiguous fall-back hour is rejected with 422), live Clock Out timer (1.6), admin attendance table mirroring the employee layout and retiring admin corrections (1.7), Milestone 2 and 3.
+- **Admin correction dialog/endpoint still exist** (old per-record model, `ReasonCode = Other`); employees use the new endpoints.
+- **Lint:** four pre-existing `set-state-in-effect`/fast-refresh warnings remain (`auth.tsx`, `ClockPanel.tsx`, `Employees.tsx`, `AttendanceAdmin.tsx`).
+- **Mutation checks** were not run for the newest tests (admin history, delete).
+- **Local dev setup:** dev passwords and the login token in sessionStorage, as in earlier phases.
