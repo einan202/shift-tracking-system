@@ -94,3 +94,10 @@ Frontend only (`AttendanceAdmin.tsx`, `index.css`); same data, API, colours, tag
 - Phones: the Punched column folds under the counted time, nothing is clipped, no horizontal scroll at 375 px.
 - Checked in the browser at 375 and 1280 px; no console errors.
 - Not done (option B, backlog): the employee-timesheet layout for admins (Date/Day/Worked/Expected/Balance, month summary, per-day history) needs a new endpoint (iteration 1.7).
+
+## Admin Attendance: visual pass (user request: noticeable, not a redesign)
+Frontend only (`AttendanceAdmin.tsx`, `index.css`); palette, tags, dialog, data and behaviour unchanged.
+- **Filter bar:** employee select, a joined month stepper ("November 2026", centred between its arrows) and a primary "Add missing record" button share one tinted bar; the header shows a one-line month summary (days, records, corrected/added/deleted counts, derived from the loaded rows).
+- **Records:** grouped under a day band (date plus record count); the counted time is the main element with orange "corrected"/"added" and "deleted" tags beside it; the punched time is muted in its own column; History opens as a full-width panel under the record.
+- **Phones:** bar stacked with 44 px controls, the table reduced to one column (header hidden), punched time folded under the counted time, full-width history, no horizontal scroll at 375 px.
+- Checked in the browser at 375 and 1280 px; no console errors. Not checked: other months/employees with deleted or manual-only rows (covered by API tests, not by this view).
