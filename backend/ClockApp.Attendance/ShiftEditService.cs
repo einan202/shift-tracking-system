@@ -69,6 +69,10 @@ public sealed class ShiftEditService(AttendanceDbContext db, IMonthStateReader m
         if (await months.GetStateAsync(req.UserId, req.Date.Year, req.Date.Month, ct) != MonthState.Open)
             throw Invalid("This month is locked and can no longer be changed.");
 
+        var start = await db.Users.AsNoTracking().Where(u => u.Id == req.UserId).Select(u => u.EmploymentStartDate).SingleAsync(ct);
+        if (start is { } s0 && req.Date < s0)
+            throw Invalid($"You can only change days from your employment start date ({s0:dd.MM.yyyy}) on.");
+
         var day = effective.Where(e => e.WorkDate == req.Date).OrderBy(e => e.In).ToList();
         var rows = new List<AttendanceCorrection>();
         var after = effective.ToList();

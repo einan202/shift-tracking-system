@@ -50,7 +50,7 @@ public static class MonthlyReportEndpoint
 
             return Results.Ok(new
             {
-                year = y, month = m, zurichToday = today,
+                year = y, month = m, zurichToday = today, employmentStartDate = start,
                 days = sheet.Days.Select(d => new
                 {
                     date = d.Date, weekday = d.Weekday.ToString(), clockInUtc = d.ClockIn, clockOutUtc = d.ClockOut,
