@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import ShiftEditDialog from './ShiftEditDialog'
 import { formatBalance, formatDate, formatHours, formatTime } from '../../format'
@@ -33,13 +33,13 @@ export default function Timesheet({ reloadKey = 0 }: { reloadKey?: number }) {
   const [editing, setEditing] = useState<SheetDay | null>(null)
   const [bump, setBump] = useState(0)
 
-  const load = useCallback(async () => {
-    try {
-      const r = await api<Sheet>(`/attendance/me/timesheet${ym ? `?year=${ym.year}&month=${ym.month}` : ''}`)
-      if (r.ok && r.data) { setSheet(r.data); setError(false) } else setError(true)
-    } catch { setError(true) }
-  }, [ym])
-  useEffect(() => { void load() }, [load, reloadKey, bump])
+  useEffect(() => {
+    let cancelled = false
+    api<Sheet>(`/attendance/me/timesheet${ym ? `?year=${ym.year}&month=${ym.month}` : ''}`)
+      .then((r) => { if (cancelled) return; if (r.ok && r.data) { setSheet(r.data); setError(false) } else setError(true) })
+      .catch(() => { if (!cancelled) setError(true) })
+    return () => { cancelled = true }
+  }, [ym, reloadKey, bump])
 
   if (error) return <section className="panel"><p role="alert" className="notice notice--error">Could not load the timesheet.</p></section>
   if (!sheet) return <section className="panel" aria-busy="true"><p>Loading…</p></section>
