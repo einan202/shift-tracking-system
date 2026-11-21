@@ -39,8 +39,8 @@ public sealed class AppUserPermissionTests : IClassFixture<DatabaseFixture>
     }
 
     private static string InsertCorrection(int userId, int adminId) => $"""
-        INSERT INTO AttendanceCorrections (Kind, UserId, WorkDate, CorrectedClockInUtc, CorrectedClockOutUtc, Reason, CreatedByUserId, CreatedAtUtc)
-        VALUES ('Add', {userId}, '2026-02-02', '2026-02-02T08:00:00Z', '2026-02-02T09:00:00Z', 'permission test', {adminId}, '2026-02-03T08:00:00Z')
+        INSERT INTO AttendanceCorrections (Kind, UserId, WorkDate, CorrectedClockInUtc, CorrectedClockOutUtc, Reason, ReasonCode, CreatedByUserId, CreatedAtUtc)
+        VALUES ('Add', {userId}, '2026-02-02', '2026-02-02T08:00:00Z', '2026-02-02T09:00:00Z', 'permission test', 'Other', {adminId}, '2026-02-03T08:00:00Z')
         """;
 
     [RequiresDbFact]
@@ -53,6 +53,19 @@ public sealed class AppUserPermissionTests : IClassFixture<DatabaseFixture>
         Assert.Equal(1, await Exec(c, InsertCorrection(userId, userId)));                                                                          // correction
         Assert.Equal(1, await Exec(c, $"UPDATE Users SET IsActive = 0 WHERE Id = {userId}"));                                                       // deactivate
         Assert.Equal(1, await Exec(c, "UPDATE ShiftSettings SET DurationMinutes = 480 WHERE Id = 1"));                                              // shift duration
+    }
+
+    [RequiresDbFact]
+    public async Task Schedule_versions_are_append_only_for_the_app_user()
+    {
+        var (userId, _) = await SeedAsync();
+        await using var c = await AppConnection();
+        const string cols = "(UserId, EffectiveFrom, ExpectedMinutesMon, ExpectedMinutesTue, ExpectedMinutesWed, ExpectedMinutesThu, ExpectedMinutesFri, ExpectedMinutesSat, ExpectedMinutesSun, AllowsOvernightShifts, CreatedByUserId, CreatedAtUtc)";
+
+        Assert.Equal(1, await Exec(c, $"INSERT INTO EmployeeScheduleVersions {cols} VALUES ({userId}, '2026-06-01', 510, 510, 510, 510, 360, 0, 0, 0, {userId}, '2026-05-20T08:00:00Z')"));
+
+        await Assert.ThrowsAsync<SqlException>(() => Exec(c, $"UPDATE EmployeeScheduleVersions SET ExpectedMinutesMon = 1 WHERE UserId = {userId}"));
+        await Assert.ThrowsAsync<SqlException>(() => Exec(c, $"DELETE FROM EmployeeScheduleVersions WHERE UserId = {userId}"));
     }
 
     [RequiresDbFact]
