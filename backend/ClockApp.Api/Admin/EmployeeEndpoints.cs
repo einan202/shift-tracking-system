@@ -46,6 +46,8 @@ public static class EmployeeEndpoints
             // Role is fixed server-side: this endpoint can only ever create Employees.
             var user = new User { Email = email, FullName = name, Role = UserRole.Employee, IsActive = true, EmploymentStartDate = startDate };
             var rawToken = InviteTokens.Issue(user, clock.GetUtcNow());
+            // The user and the first schedule version are saved together: no employee exists without a schedule.
+            await using var tx = await db.Database.BeginTransactionAsync();
             db.Users.Add(user);
             await db.SaveChangesAsync();
             var version = new EmployeeScheduleVersion
@@ -56,6 +58,7 @@ public static class EmployeeEndpoints
             ScheduleResolver.Apply(version, minutes);
             db.EmployeeScheduleVersions.Add(version);
             await db.SaveChangesAsync();
+            await tx.CommitAsync();
 
             return Results.Created($"/api/admin/employees/{user.Id}", new
             {
