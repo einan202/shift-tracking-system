@@ -71,11 +71,11 @@ export default function AttendanceAdmin() {
             </select>
           </label>
           {shown && (
-            <>
+            <div className="att-stepper">
               <button className="btn btn--small" onClick={() => step(-1)} aria-label="Previous month">‹</button>
               <strong className="att-toolbar__month" aria-live="polite">{monthName(shown.year, shown.month)}</strong>
               <button className="btn btn--small" onClick={() => step(1)} aria-label="Next month">›</button>
-            </>
+            </div>
           )}
           {userId !== null && <button className="btn" onClick={() => void openDialog({ kind: 'Add', userId })}>Add missing record</button>}
         </div>
