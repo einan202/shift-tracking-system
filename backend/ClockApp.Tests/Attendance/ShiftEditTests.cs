@@ -233,6 +233,15 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
         var manual = res.GetProperty("records").EnumerateArray().Single(r => r.GetProperty("source").GetString() == "manual");
         var kinds = manual.GetProperty("history").EnumerateArray().Select(h => h.GetProperty("kind").GetString()).ToArray();
         Assert.Equal(new string?[] { "Add", "Adjust" }, kinds);   // both changes, in order
+
+        // Deleting the shift keeps it visible to the admin: flagged as deleted, with the Void in its history.
+        s.Fake.Now = Now;
+        Assert.Equal(HttpStatusCode.OK, (await s.Client.PostAsJsonAsync("/api/attendance/me/shifts/delete", new { date = "2026-02-09", reasonCode = "DuplicateOrAccidental" })).StatusCode);
+        s.Fake.Now = DateTimeOffset.UtcNow;
+        var after = await ac.GetFromJsonAsync<JsonElement>($"/api/admin/attendance?userId={s.UserId}&from=2026-02-01&to=2026-02-28");
+        var gone = after.GetProperty("records").EnumerateArray().Single(r => r.GetProperty("source").GetString() == "manual");
+        Assert.True(gone.GetProperty("isVoided").GetBoolean());
+        Assert.Equal(new string?[] { "Add", "Adjust", "Void" }, gone.GetProperty("history").EnumerateArray().Select(h => h.GetProperty("kind").GetString()).ToArray());
     }
 
     [ClockApp.Tests.Data.RequiresDbFact]
