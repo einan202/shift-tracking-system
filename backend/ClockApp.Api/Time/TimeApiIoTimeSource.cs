@@ -12,6 +12,8 @@ public sealed class TimeApiIoTimeSource(HttpClient http) : IAttendanceTimeSource
 {
     public const string ProviderName = "timeapi.io";
     private const int Attempts = 2;
+    // Seen live: timeapi.io can answer 502 for a moment. An instant retry would hit the same blip.
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(400);
 
     private sealed record Response(
         [property: JsonPropertyName("dateTime")] DateTime? DateTime,
@@ -29,7 +31,8 @@ public sealed class TimeApiIoTimeSource(HttpClient http) : IAttendanceTimeSource
             }
             catch (TimeSourceException ex) when (attempt < Attempts)
             {
-                last = ex; // retry once
+                last = ex; // retry once, after a short pause
+                await Task.Delay(RetryDelay, cancellationToken);
             }
         }
         throw last!;
