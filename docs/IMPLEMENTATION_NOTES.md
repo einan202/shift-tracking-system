@@ -78,3 +78,10 @@ Approved by the user in chat; the palette and design language are unchanged.
 - [Eng] Layout bug fixed: wide tables widened the whole page because grid children could not shrink (`.stack > *, .panel { min-width: 0 }`).
 - Checked in the browser at ~1440, ~830 and 375 px (employees list and modal, settings, login at desktop width). Not captured: login at 375 px and the attendance/timesheet screens were not re-reviewed; no further density changes were made there.
 - Known minor issue (pre-existing): when the admin token is stale the employees list shows "No employees yet" instead of an error.
+
+### Scale-back of the UI pass (user decision: preserve the existing design)
+- Weekday grid: kept compact and wrapping, but plain cells (no per-day border/background; the "off" state is colour only).
+- Login: original plain layout and "Sign in" heading restored; "Shift Tracking" stays as the title above it (left-aligned).
+- Employee count badge removed.
+- Phones: the stacked-card table was replaced by the normal table with the Starts/Email/Status columns folded under the name and a stacked actions column; no horizontal overflow at 375 px, all actions visible.
+- Unchanged: Add-employee modal, Settings per-weekday default, page-width fix, all functionality.
