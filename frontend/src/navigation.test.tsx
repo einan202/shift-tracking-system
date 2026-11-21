@@ -80,7 +80,7 @@ it('admin sees Attendance, Employees and Settings, opens on Attendance', async (
   expect(window.location.pathname).toBe('/attendance')
 
   fireEvent.click(tab('Settings'))
-  expect(await screen.findByRole('heading', { name: 'Default shift duration' })).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: 'Default working week' })).toBeTruthy()
   expect(window.location.pathname).toBe('/settings')
 })
 
