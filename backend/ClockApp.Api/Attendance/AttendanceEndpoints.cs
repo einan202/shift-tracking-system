@@ -42,6 +42,9 @@ public static class AttendanceEndpoints
     private static IResult ToResult(ClockResult result, string conflict) => result.Outcome switch
     {
         ClockOutcome.Recorded => Results.Ok(new { clockedIn = result.Record!.IsOpen, record = Dto(result.Record) }),
+        ClockOutcome.ConflictsWithCorrection => Results.Json(
+            new { error = $"Your clock-in was corrected to {ZurichTime.ToLocal(result.CorrectedClockIn!.Value):yyyy-MM-dd HH:mm} (Zurich time), which is later than this clock-out. Nothing was recorded; try again in a moment or ask an administrator." },
+            statusCode: StatusCodes.Status409Conflict),
         ClockOutcome.OverlapsExisting => Results.Json(
             new { error = "This overlaps a corrected record of yours. Please contact an administrator." },
             statusCode: StatusCodes.Status409Conflict),

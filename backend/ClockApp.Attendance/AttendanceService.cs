@@ -15,9 +15,11 @@ public enum ClockOutcome
     NotClockedIn,
     /// <summary>The API time falls inside / before an existing (e.g. admin-corrected) record of this employee.</summary>
     OverlapsExisting,
+    /// <summary>Clock-out time is not after the clock-in an admin CORRECTED (a data conflict, not a time-provider fault).</summary>
+    ConflictsWithCorrection,
 }
 
-public sealed record ClockResult(ClockOutcome Outcome, AttendanceRecord? Record);
+public sealed record ClockResult(ClockOutcome Outcome, AttendanceRecord? Record, DateTimeOffset? CorrectedClockIn = null);
 
 /// <summary>
 /// Clock In / Clock Out (missing/duplicate punch policy "A": strict reject).
@@ -84,12 +86,17 @@ public sealed class AttendanceService(AttendanceDbContext db, IAttendanceTimeSou
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await UserLock.AcquireAsync(db, userId, ct);
 
-        // The clock-out must also be after the EFFECTIVE clock-in: an admin may have corrected an open record's
-        // clock-in (up to the server's "now"), and the time API can be a little behind that.
         var open = (await EffectiveAttendance.LoadAsync(db, userId, ct: ct)).FirstOrDefault(e => e.IsOpen);
         if (open is null) return new ClockResult(ClockOutcome.NotClockedIn, null);
+
+        // Provider time not after the GENUINE clock-in: the time source is inconsistent -> fail closed (503).
+        if (now.UtcInstant <= open.OriginalIn!.Value)
+            throw new TimeSourceException("Time source returned a time that is not after the clock-in; nothing was recorded.");
+
+        // Provider time is fine, but an admin corrected the clock-in to a later time (up to the server's "now",
+        // and the provider can be a little behind it). That is a conflict with the corrected data -> 409, nothing written.
         if (now.UtcInstant <= open.In)
-            throw new TimeSourceException("Time source returned a time that is not after the (corrected) clock-in; nothing was recorded.");
+            return new ClockResult(ClockOutcome.ConflictsWithCorrection, null, open.In);
 
         // Atomic conditional update: the first committed clock-out wins and is never overwritten.
         // A concurrent second one matches 0 rows and becomes a 409 (its API time is discarded).
