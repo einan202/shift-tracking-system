@@ -12,26 +12,25 @@ export default function WeekdayDurations({ value, onChange, fallbackMinutes }: {
   return (
     <fieldset className="weekdays">
       <legend>Working days and expected duration</legend>
-      {WEEKDAYS.map((day, i) => {
-        const working = value[i] > 0
-        return (
-          <div key={day} className="weekdays__row">
-            <label className="weekdays__day">
-              <input type="checkbox" checked={working} onChange={(e) => set(i, e.target.checked ? fallbackMinutes : 0)} />
-              {day}
-            </label>
-            <label className="weekdays__field">
-              <span className="sr-only">{day} hours</span>
-              <input type="number" min={0} max={24} disabled={!working} value={Math.floor(value[i] / 60)}
-                onChange={(e) => set(i, Number(e.target.value) * 60 + (value[i] % 60))} aria-label={`${day} hours`} /> h
-            </label>
-            <label className="weekdays__field">
-              <input type="number" min={0} max={59} disabled={!working} value={value[i] % 60}
-                onChange={(e) => set(i, Math.floor(value[i] / 60) * 60 + Number(e.target.value))} aria-label={`${day} minutes`} /> min
-            </label>
-          </div>
-        )
-      })}
+      <div className="weekdays__grid">
+        {WEEKDAYS.map((day, i) => {
+          const working = value[i] > 0
+          return (
+            <div key={day} className={`weekdays__row ${working ? '' : 'weekdays__row--off'}`}>
+              <label className="weekdays__day">
+                <input type="checkbox" checked={working} aria-label={day} onChange={(e) => set(i, e.target.checked ? fallbackMinutes : 0)} />
+                <span aria-hidden="true">{day.slice(0, 3)}</span>
+              </label>
+              <div className="weekdays__time">
+                <input type="number" min={0} max={24} disabled={!working} value={Math.floor(value[i] / 60)}
+                  onChange={(e) => set(i, Number(e.target.value) * 60 + (value[i] % 60))} aria-label={`${day} hours`} /><span aria-hidden="true">h</span>
+                <input type="number" min={0} max={59} disabled={!working} value={value[i] % 60}
+                  onChange={(e) => set(i, Math.floor(value[i] / 60) * 60 + Number(e.target.value))} aria-label={`${day} minutes`} /><span aria-hidden="true">m</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </fieldset>
   )
 }

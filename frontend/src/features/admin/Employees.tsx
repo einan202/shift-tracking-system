@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, errorText } from '../../api'
 import { formatStamp } from '../../format'
 import WeekdayDurations, { defaultWeek } from './WeekdayDurations'
@@ -16,6 +16,10 @@ export default function Employees() {
   const [error, setError] = useState<string | null>(null)
   const [companyDefault, setCompanyDefault] = useState(480)
   const [week, setWeek] = useState<number[]>(defaultWeek(480))
+  const [companyWeek, setCompanyWeek] = useState<number[]>(defaultWeek(480))
+  const [adding, setAdding] = useState(false)
+  const firstField = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (adding) firstField.current?.focus() }, [adding])
 
   const load = useCallback(async () => {
     try {
@@ -26,8 +30,8 @@ export default function Employees() {
   useEffect(() => { void load() }, [load])
   // Prefill new employees with the company default duration (Mon-Fri); each weekday can then be changed.
   useEffect(() => {
-    api<{ durationMinutes: number }>('/admin/settings/shift').then((r) => {
-      if (r.ok && r.data) { setCompanyDefault(r.data.durationMinutes); setWeek(defaultWeek(r.data.durationMinutes)) }
+    api<{ durationMinutes: number; minutes?: number[] }>('/admin/settings/shift').then((r) => {
+      if (r.ok && r.data) { const w = r.data.minutes ?? defaultWeek(r.data.durationMinutes); setCompanyDefault(r.data.durationMinutes); setCompanyWeek(w); setWeek(w) }
     }).catch(() => {})
   }, [])
 
@@ -63,54 +67,75 @@ export default function Employees() {
   return (
     <div className="stack">
       <section className="panel">
-        <h2>Add employee</h2>
-        <form onSubmit={create} className="stack">
-          <div className="row row--wrap">
-            <label>Full name<input name="fullName" required maxLength={200} /></label>
-            <label>Email<input name="email" type="email" required maxLength={256} /></label>
-            <label>Employment start date (empty = today)<input name="startDate" type="date" /></label>
-          </div>
-          <WeekdayDurations value={week} onChange={setWeek} fallbackMinutes={companyDefault} />
-          <label className="inline"><input name="overnight" type="checkbox" /> Overnight shifts allowed (night workers)</label>
-          <div><button className="btn btn--primary">Create and get link</button></div>
-        </form>
-        {error && <p role="alert" className="notice notice--error">{error}</p>}
-        {invite && (
+        <header className="panel__head">
+          <h2>Employees <span className="muted count">{list.length}</span></h2>
+          <button className="btn btn--primary" onClick={() => { setError(null); setInvite(null); setWeek(companyWeek); setAdding(true) }}>Add employee</button>
+        </header>
+        {invite && !adding && (
           <div className="notice notice--success" role="status">
             <p>One-time link for <strong>{invite.name}</strong> (valid until {formatStamp(invite.expires)}). It is shown only now; send it to the employee.</p>
-            <input readOnly value={invite.url} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
-            <button className="btn btn--small" onClick={() => void navigator.clipboard?.writeText(invite.url)}>Copy link</button>
+            <div className="row"><input readOnly value={invite.url} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
+              <button className="btn btn--small" onClick={() => void navigator.clipboard?.writeText(invite.url)}>Copy link</button></div>
           </div>
         )}
-      </section>
-
-      <section className="panel">
-        <h2>Employees</h2>
         <div className="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Email</th><th>Starts</th><th>Status</th><th /></tr></thead>
+          <table className="employees">
+            <thead><tr><th>Name</th><th className="col-email">Email</th><th className="col-start">Starts</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {list.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.fullName}</td>
-                  <td>{e.email}</td>
-                  <td className="num">{e.employmentStartDate ?? '–'}</td>
+                  <td>{e.fullName}<span className="email-sub">{e.email}</span></td>
+                  <td className="email col-email">{e.email}</td>
+                  <td className="num col-start">{e.employmentStartDate ?? '–'}</td>
                   <td>
                     {!e.isActive ? <span className="tag">deactivated</span>
                       : !e.hasPassword ? <span className="tag">waiting for password</span>
                       : <span className="tag tag--ok">active</span>}
                   </td>
-                  <td className="r">
+                  <td className="r actions">
                     <button className="btn btn--small" onClick={() => void reissue(e)}>New link</button>{' '}
                     <button className="btn btn--small" onClick={() => void toggle(e)}>{e.isActive ? 'Deactivate' : 'Activate'}</button>
                   </td>
                 </tr>
               ))}
-              {list.length === 0 && <tr><td colSpan={5} className="muted">No employees yet.</td></tr>}
+              {list.length === 0 && <tr><td colSpan={5} className="muted">No employees yet. Use “Add employee” to create the first one.</td></tr>}
             </tbody>
           </table>
         </div>
       </section>
+
+      {adding && (
+        <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="add-emp-title" onKeyDown={(e) => { if (e.key === 'Escape') setAdding(false) }}>
+          <div className="dialog dialog--wide stack">
+            <h2 id="add-emp-title">{invite ? 'Employee created' : 'Add employee'}</h2>
+            {invite ? (
+              <>
+                <div className="notice notice--success" role="status">
+                  <p>One-time link for <strong>{invite.name}</strong> (valid until {formatStamp(invite.expires)}). It is shown only now; send it to the employee.</p>
+                  <div className="row"><input readOnly value={invite.url} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} />
+                    <button className="btn btn--small" onClick={() => void navigator.clipboard?.writeText(invite.url)}>Copy link</button></div>
+                </div>
+                <div className="row"><button className="btn btn--primary" onClick={() => setAdding(false)}>Done</button></div>
+              </>
+            ) : (
+              <form onSubmit={create} className="stack">
+                <div className="form-grid">
+                  <label>Full name<input ref={firstField} name="fullName" required maxLength={200} autoComplete="off" /></label>
+                  <label>Email<input name="email" type="email" required maxLength={256} autoComplete="off" /></label>
+                  <label>Start date <span className="muted">(empty = today)</span><input name="startDate" type="date" /></label>
+                </div>
+                <WeekdayDurations value={week} onChange={setWeek} fallbackMinutes={companyDefault} />
+                <label className="inline"><input name="overnight" type="checkbox" /> Overnight shifts allowed (night workers)</label>
+                {error && <p role="alert" className="notice notice--error">{error}</p>}
+                <div className="row dialog__actions">
+                  <button className="btn btn--primary">Create and get link</button>
+                  <button type="button" className="btn" onClick={() => setAdding(false)}>Cancel</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

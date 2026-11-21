@@ -92,10 +92,6 @@ tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 .narrow-panel { max-width: 24rem; }
 .weekdays { border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .75rem; display: grid; gap: .25rem; }
 .weekdays legend { font-weight: 600; font-size: .9rem; padding: 0 .25rem; }
-.weekdays__row { display: grid; grid-template-columns: 9rem 5.5rem 5.5rem; gap: .5rem; align-items: center; }
-.weekdays__day { display: flex; align-items: center; gap: .5rem; font-weight: 500; }
-.weekdays__field { display: flex; align-items: center; gap: .35rem; font-weight: 400; }
-.weekdays__field input { width: 4rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .overlay { position: fixed; inset: 0; background: rgba(18, 32, 46, .55); display: grid; place-items: center; padding: 1rem; }
@@ -126,3 +122,50 @@ tfoot th { border-bottom: 0; border-top: 2px solid var(--ink); }
 
 .voided { color: #8b97a4; text-decoration: line-through; }
 .voided .tag { text-decoration: none; }
+
+/* Login / set-password: brand above the card */
+.auth { margin-top: 2.5rem; }
+.auth__brand { margin: 0 0 1rem; font-size: 1.5rem; font-weight: 700; letter-spacing: .01em; text-align: center; }
+.auth__card h2 { margin-bottom: .75rem; }
+
+/* Employees: list first, form in a modal */
+.count { font-size: .95rem; font-weight: 500; }
+.employees td, .employees th { white-space: nowrap; }
+.employees td.email { color: var(--steel); }
+.actions { white-space: nowrap; }
+.dialog--wide { width: min(46rem, 100%); }
+.form-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.form-grid input { width: 100%; }
+.dialog__actions { justify-content: flex-start; }
+
+/* Weekday durations: compact grid (7 across on desktop, wraps on tablet and phone) */
+.weekdays { border: 1px solid var(--line); border-radius: var(--radius); padding: .6rem .75rem .75rem; margin: 0; }
+.weekdays legend { font-size: .9rem; font-weight: 600; padding: 0 .35rem; }
+.weekdays__grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(7.75rem, 1fr)); }
+.weekdays__row { display: grid; gap: .35rem; padding: .4rem; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+.weekdays__row--off { background: var(--paper); color: var(--steel); }
+.weekdays__day { display: flex; align-items: center; gap: .4rem; font-weight: 700; }
+.weekdays__time { display: flex; align-items: center; gap: .2rem; font-size: .85rem; }
+.weekdays__time input { width: 100%; min-width: 2.6rem; padding: .3rem .35rem; min-height: 2.1rem; text-align: right; appearance: textfield; -moz-appearance: textfield; }
+.weekdays__time input::-webkit-outer-spin-button, .weekdays__time input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+@media (max-width: 520px) { .overlay { padding: .5rem; align-items: start; } }
+
+/* Grid children may shrink below their content, so wide tables scroll inside their panel instead of widening the page */
+.stack > *, .panel { min-width: 0; }
+.email-sub { display: none; color: var(--steel); font-size: .85rem; }
+@media (max-width: 720px) {
+  .employees .col-email, .employees .col-start { display: none; }
+  .email-sub { display: block; }
+  .employees td, .employees th { white-space: normal; }
+  .employees .actions { white-space: nowrap; }
+}
+@media (max-width: 720px) {
+  .employees thead { display: none; }
+  .employees, .employees tbody { display: block; }
+  .employees tr { display: grid; grid-template-columns: 1fr auto; gap: .25rem .5rem; align-items: start; padding: .6rem 0; border-bottom: 1px solid var(--line); }
+  .employees td { border: 0; padding: 0; }
+  .employees td.actions { grid-column: 1 / -1; text-align: left; margin-top: .25rem; }
+  .employees td[colspan] { grid-column: 1 / -1; }
+}
+
+label .muted { font-weight: 400; }
