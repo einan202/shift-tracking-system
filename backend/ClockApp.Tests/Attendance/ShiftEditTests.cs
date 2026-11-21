@@ -176,6 +176,42 @@ public sealed class ShiftEditTests : IClassFixture<ClockApp.Tests.Data.DatabaseF
     }
 
     [ClockApp.Tests.Data.RequiresDbFact]
+    public async Task Employee_deletes_a_shift_with_a_reason_but_not_an_open_one_and_can_re_add_it()
+    {
+        var s = await ArrangeAsync();
+        await using var _ = s.Factory;
+        object Del(string d, string code = "DuplicateOrAccidental") => new { date = d, reasonCode = code };
+
+        // Tuesday is still open: blocked, nothing written.
+        var open = await s.Client.PostAsJsonAsync("/api/attendance/me/shifts/delete", Del("2026-02-03"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, open.StatusCode);
+        // An empty day and a missing reason are rejected too.
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await s.Client.PostAsJsonAsync("/api/attendance/me/shifts/delete", Del("2026-02-09"))).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await s.Client.PostAsJsonAsync("/api/attendance/me/shifts/delete", Del("2026-02-02", "Other"))).StatusCode);
+        Assert.Equal(0, await CorrectionCountAsync(s.UserId));
+
+        // Preview writes nothing; commit voids Monday; the punch row stays.
+        var prev = await s.Client.PostAsJsonAsync("/api/attendance/me/shifts/delete/preview", Del("2026-02-02"));
+        Assert.Equal(HttpStatusCode.OK, prev.StatusCode);
+        Assert.Equal(0, await CorrectionCountAsync(s.UserId));
+        var del = await s.Client.PostAsJsonAsync("/api/attendance/me/shifts/delete", Del("2026-02-02"));
+        var after = (await del.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("after").GetProperty("day");
+        Assert.Equal(JsonValueKind.Null, after.GetProperty("clockInUtc").ValueKind);
+        await using (var db = _db.CreateContext())
+        {
+            var row = await db.AttendanceCorrections.SingleAsync(c => c.UserId == s.UserId);
+            Assert.Equal(CorrectionKind.Void, row.Kind);
+            Assert.Equal(s.ClosedRecordId, row.AttendanceRecordId);
+            Assert.Equal(ReasonCodes.DuplicateOrAccidental, row.ReasonCode);
+            Assert.NotNull(row.BatchId);
+            Assert.True(await db.AttendanceRecords.AnyAsync(r => r.Id == s.ClosedRecordId));
+        }
+
+        // Re-adding the day is allowed afterwards.
+        Assert.Equal(HttpStatusCode.OK, (await s.Client.PostAsJsonAsync("/api/attendance/me/shifts", Edit("2026-02-02", "2026-02-02T08:00:00", "2026-02-02T16:00:00", "ForgotClockIn"))).StatusCode);
+    }
+
+    [ClockApp.Tests.Data.RequiresDbFact]
     public async Task Overlapping_another_shift_is_rejected_and_an_employee_cannot_reach_other_users()
     {
         var s = await ArrangeAsync();

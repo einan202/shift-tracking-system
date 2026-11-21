@@ -25,12 +25,16 @@ public static class ShiftEditEndpoints
 
         group.MapPost("me/shifts/preview", (ShiftEditDto dto, ClaimsPrincipal user, AttendanceDbContext db, ShiftEditService svc, TimeProvider clock, CancellationToken ct) =>
             Run(dto, user, db, svc, clock, commit: false, ct));
+        group.MapPost("me/shifts/delete", (ShiftEditDto dto, ClaimsPrincipal user, AttendanceDbContext db, ShiftEditService svc, TimeProvider clock, CancellationToken ct) =>
+            Run(dto, user, db, svc, clock, commit: true, ct, delete: true));
+        group.MapPost("me/shifts/delete/preview", (ShiftEditDto dto, ClaimsPrincipal user, AttendanceDbContext db, ShiftEditService svc, TimeProvider clock, CancellationToken ct) =>
+            Run(dto, user, db, svc, clock, commit: false, ct, delete: true));
         group.MapPost("me/shifts", (ShiftEditDto dto, ClaimsPrincipal user, AttendanceDbContext db, ShiftEditService svc, TimeProvider clock, CancellationToken ct) =>
             Run(dto, user, db, svc, clock, commit: true, ct));
     }
 
     private static async Task<IResult> Run(
-        ShiftEditDto dto, ClaimsPrincipal user, AttendanceDbContext db, ShiftEditService svc, TimeProvider clock, bool commit, CancellationToken ct)
+        ShiftEditDto dto, ClaimsPrincipal user, AttendanceDbContext db, ShiftEditService svc, TimeProvider clock, bool commit, CancellationToken ct, bool delete = false)
     {
         DateTimeOffset? clockIn, clockOut;
         try { clockIn = ToUtc(dto.ClockInLocal, dto.ClockInOffsetMinutes); clockOut = ToUtc(dto.ClockOutLocal, dto.ClockOutOffsetMinutes); }
@@ -41,7 +45,8 @@ public static class ShiftEditEndpoints
         var now = clock.GetUtcNow();
         try
         {
-            var plan = commit ? await svc.CommitAsync(req, now, ct) : await svc.PreviewAsync(req, now, ct);
+            var plan = delete ? await svc.DeleteAsync(req, now, commit, ct)
+                : commit ? await svc.CommitAsync(req, now, ct) : await svc.PreviewAsync(req, now, ct);
 
             var start = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.EmploymentStartDate).SingleAsync(ct);
             var versions = await db.EmployeeScheduleVersions.AsNoTracking().Where(v => v.UserId == userId).ToListAsync(ct);
